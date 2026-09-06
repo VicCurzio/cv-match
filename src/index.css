@@ -1,0 +1,77 @@
+@import 'tailwindcss';
+
+/*
+ * Two visual systems live in this project and they do not share tokens: the app
+ * (here) and the resume templates (in `src/templates`, drawn by react-pdf).
+ * Mixing them is how you end up with a resume painted in the app's brand colour
+ * and a light grey that vanishes on paper.
+ */
+
+@theme {
+  --color-background: #fbfbfd;
+  --color-foreground: #16161a;
+  --color-card: #ffffff;
+  --color-muted: #f2f2f6;
+  --color-muted-foreground: #62626e;
+  --color-border: #e3e3ea;
+  --color-primary: #1f4e79;
+  --color-primary-foreground: #ffffff;
+  --color-destructive: #b42318;
+
+  /* Finding severities. Never the only signal: every finding also carries an
+     icon and a text label. */
+  --color-severity-error: #b42318;
+  --color-severity-warning: #b54708;
+  --color-severity-suggestion: #175cd3;
+
+  --radius-card: 12px;
+}
+
+@media (prefers-color-scheme: dark) {
+  @theme {
+    --color-background: #121216;
+    --color-foreground: #f3f3f6;
+    --color-card: #1a1a20;
+    --color-muted: #23232b;
+    --color-muted-foreground: #a1a1ad;
+    --color-border: #2e2e38;
+    --color-primary: #6aa5dc;
+    --color-primary-foreground: #10131a;
+    --color-destructive: #f97066;
+
+    --color-severity-error: #f97066;
+    --color-severity-warning: #fdb022;
+    --color-severity-suggestion: #84caff;
+  }
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--color-background);
+  color: var(--color-foreground);
+  font-family:
+    ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  font-size: 14px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+*:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
