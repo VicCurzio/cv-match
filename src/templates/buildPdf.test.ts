@@ -12,7 +12,7 @@ const withPhoto = {
 
 async function render(options: Parameters<typeof buildPdf>[1]) {
   const blob = await buildPdf(withPhoto, options)
-  return readPdf(new Uint8Array(await blob.arrayBuffer()))
+  return await readPdf(new Uint8Array(await blob.arrayBuffer()))
 }
 
 /**
