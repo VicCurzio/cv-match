@@ -93,7 +93,10 @@ Se testea el núcleo, no la interfaz:
 - El bundle pesa alrededor de 1,5 MB sin comprimir, casi todo `@react-pdf/renderer`. Se puede recortar con carga diferida cuando moleste.
 - La foto se guarda en el navegador. El cupo total ronda los 5 MB, por eso se comprime a 400x400 antes de guardarla; sin eso una foto de celular llena el cupo y el navegador deja de guardar sin avisar.
 - La fuente del PDF es una de las estándar del formato (Helvetica y Times-Roman). Cubren los acentos y la ñ sin embeber nada. Cambiar a una fuente propia obliga a registrarla con `Font.register`.
-- Importar un CV existente (`.pdf`, `.docx`) todavía no está implementado.
+- Importar un CV de dos columnas devuelve el texto entremezclado: el PDF no guarda columnas, guarda posiciones. Por eso lo extraído siempre se muestra para revisar antes de aplicarse.
+- Un CV escaneado, o exportado como imagen desde una herramienta de diseño, no se puede importar. La app lo detecta y lo dice; los datos hay que cargarlos a mano.
+- El `.doc` anterior a 2007 no se lee: es un binario propietario sin librería de JavaScript razonable. La app pide guardarlo como `.docx` o PDF.
+- El recorte de la foto es automático (el cuadrado centrado más grande). No hay control manual de encuadre todavía.
 
 ## Licencia
 

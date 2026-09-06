@@ -7,6 +7,15 @@ Versionado según [SemVer](https://semver.org/lang/es/).
 
 ### Agregado
 
+- Importar un CV existente en `.pdf` o `.docx`, leído enteramente en el navegador. El formato se detecta por contenido y no por extensión; el `.doc` anterior a 2007 y los CV escaneados se rechazan con una salida concreta. Lo extraído se muestra para revisar antes de aplicarse, y lo que no se pudo ubicar se lista en vez de descartarse.
+- Lector de texto de PDF para los tests (`src/test/pdfText.ts`), que verifica sobre el archivo generado —y no sobre el código que lo genera— que hay texto seleccionable, que no se corta ninguna palabra y que la foto no llega a donde no debe.
+
+### Arreglado
+
+- El PDF ya no parte palabras con guión entre líneas. react-pdf hifenaba con un diccionario en inglés y cortaba las direcciones de correo al medio.
+
+### Agregado (versión inicial)
+
 - Pantalla de inicio con las dos preguntas que definen el CV: mercado de destino y si tiene que pasar un filtro automático.
 - Perfil de mercado (Argentina e internacional) como dato, con tres políticas por campo: permitido, desaconsejado y prohibido.
 - Filtrado centralizado de campos prohibidos en `applyProfile()`. El dato del usuario no se borra, queda fuera de esa exportación.
