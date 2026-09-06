@@ -52,6 +52,23 @@ export const copy = {
       `${errors} ${errors === 1 ? 'error' : 'errores'} · ${warnings} ${warnings === 1 ? 'advertencia' : 'advertencias'} · ${suggestions} ${suggestions === 1 ? 'sugerencia' : 'sugerencias'}`,
   },
 
+  import: {
+    open: 'Importar CV existente',
+    title: 'Importar tu CV actual',
+    subtitle: 'Leemos el archivo acá, en tu navegador. No se sube a ningún lado.',
+    pick: 'Elegí tu CV',
+    formats: 'Formatos: .pdf y .docx',
+    reading: 'Leyendo el archivo...',
+    reviewHint:
+      'Esto es lo que pudimos leer. Un CV no guarda su estructura por dentro, así que revisá antes de aplicar: destildá lo que esté mal y después corregí lo que haga falta en el formulario.',
+    notFound: 'no lo encontramos',
+    leftovers: 'Esto no supimos dónde ponerlo. Copialo a mano donde corresponda:',
+    apply: 'Aplicar al CV',
+    another: 'Probar con otro archivo',
+    tryAnother: 'Elegir otro archivo',
+    byHand: 'Cargar a mano',
+  },
+
   photo: {
     label: 'Foto',
     add: 'Subir foto',

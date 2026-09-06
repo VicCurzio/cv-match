@@ -1,10 +1,11 @@
-import { Download, FileJson, Upload } from 'lucide-react'
+import { Download, FileJson, FileUp, Upload } from 'lucide-react'
 import { useMemo, useRef, useState } from 'react'
 import { runAnalysis } from '@/domain/analysis/runAnalysis'
 import { downloadBlob, downloadJson } from '@/domain/export/download'
 import { MARKET_PROFILES, type MarketId } from '@/domain/market/marketProfile'
 import { parseResumeJson } from '@/domain/resume/storage'
 import type { ResumeState } from '@/domain/resume/useResume'
+import { ImportDialog } from '@/screens/import/ImportDialog'
 import { ReviewPanel } from '@/screens/review/ReviewPanel'
 import { Button } from '@/shared/ui/Button'
 import { Notice } from '@/shared/ui/Card'
@@ -16,6 +17,7 @@ import { usePdfPreview } from './usePdfPreview'
 export function EditorScreen({ state }: { state: ResumeState }) {
   const { resume, settings, setResume, setSettings, replaceAll, saveError } = state
   const [message, setMessage] = useState<string | null>(null)
+  const [importing, setImporting] = useState(false)
   const fileInput = useRef<HTMLInputElement>(null)
 
   const profile = MARKET_PROFILES[settings.market]
@@ -152,6 +154,10 @@ export function EditorScreen({ state }: { state: ResumeState }) {
               <FileJson />
               {copy.editor.exportJson}
             </Button>
+            <Button onClick={() => setImporting(true)}>
+              <FileUp />
+              {copy.import.open}
+            </Button>
             <Button onClick={() => fileInput.current?.click()}>
               <Upload />
               {copy.editor.importJson}
@@ -183,6 +189,17 @@ export function EditorScreen({ state }: { state: ResumeState }) {
           <ReviewPanel findings={findings} />
         </div>
       </div>
+
+      {importing ? (
+        <ImportDialog
+          current={resume}
+          onApply={(next) => {
+            replaceAll(next)
+            setMessage('Importamos lo que pudimos leer. Revisá el formulario y corregí lo que haga falta.')
+          }}
+          onClose={() => setImporting(false)}
+        />
+      ) : null}
     </div>
   )
 }
