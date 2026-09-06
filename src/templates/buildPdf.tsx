@@ -4,6 +4,10 @@ import type { Resume } from '@/domain/resume/resumeSchema'
 import { HarvardResume } from '@/templates/harvard/HarvardResume'
 import { ModernResume } from '@/templates/modern/ModernResume'
 import { fileName } from '@/templates/shared/format'
+import { disableHyphenation } from '@/templates/shared/typography'
+
+// Global font setting, applied once when this module loads.
+disableHyphenation()
 
 /**
  * Composing the document lives with the templates, not in `domain`: picking and
