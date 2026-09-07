@@ -166,6 +166,25 @@ export const educationExists: Rule = (resume) => {
   ]
 }
 
+/**
+ * A missing languages section is easy to overlook and costs interviews: for an
+ * administrative or commercial profile, "English: intermediate" is often what
+ * separates two otherwise identical resumes.
+ */
+export const languagesExist: Rule = (resume) => {
+  if (resume.languages.length > 0) return []
+  return [
+    {
+      id: 'languages/empty',
+      severity: 'warning',
+      section: 'languages',
+      problem: 'No tenés sección de idiomas.',
+      action:
+        'Agregala aunque solo hables español: dejarla afuera hace pensar que la omitiste a propósito. Si sabés algo de inglés, ponelo con el nivel real.',
+    },
+  ]
+}
+
 export const contentRules: Rule[] = [
   summaryLength,
   summaryIsOneBlock,
@@ -175,4 +194,5 @@ export const contentRules: Rule[] = [
   bulletLength,
   enoughSkills,
   educationExists,
+  languagesExist,
 ]

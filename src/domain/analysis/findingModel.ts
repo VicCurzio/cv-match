@@ -40,6 +40,16 @@ export interface RuleContext {
   profile: MarketProfile
   atsMode: boolean
   template: 'harvard' | 'modern'
+  /**
+   * Measured from the rendered PDF, when one exists. Rules prefer these over
+   * their own estimates: a line-count guess was off by a factor of seven on the
+   * first real resume it met. Absent in tests that only care about content.
+   */
+  layout?: {
+    pageCount: number
+    /** Share of the document's text that sits on the last page, 0 to 1. */
+    lastPageShare: number
+  }
 }
 
 /**

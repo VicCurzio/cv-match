@@ -49,20 +49,23 @@ export const restrictedFields: Rule = (resume, ctx) => {
   return findings
 }
 
-/**
- * Rough page estimate. It does not need to be exact -- it needs to catch the
- * three-page resume before the person sends it.
- */
-export function estimatePages(resume: {
+const LINES_PER_PAGE = 46
+const WORDS_PER_LINE = 13
+
+interface Measurable {
   summary: string
   experience: { bullets: string[] }[]
   education: unknown[]
   skills: unknown[]
   languages: unknown[]
-}): number {
-  const LINES_PER_PAGE = 46
-  const WORDS_PER_LINE = 13
+}
 
+/**
+ * Rough line count. It does not need to be exact -- it needs to catch the
+ * three-page resume, and the one that spills onto a second page for two lines,
+ * before the person sends either.
+ */
+export function estimateLines(resume: Measurable): number {
   let lines = 8 // header block
   lines += Math.ceil(countWords(resume.summary) / WORDS_PER_LINE) + 2
 
@@ -77,11 +80,58 @@ export function estimatePages(resume: {
   lines += Math.ceil(resume.skills.length / 4) + 2
   lines += resume.languages.length + 2
 
-  return Math.max(1, Math.ceil(lines / LINES_PER_PAGE))
+  return lines
+}
+
+export function estimatePages(resume: Measurable): number {
+  return Math.max(1, Math.ceil(estimateLines(resume) / LINES_PER_PAGE))
+}
+
+/** Below this share of the text on the last page, the spill is worth flagging. */
+const BARELY_OVER = 0.15
+
+/**
+ * A resume that runs two lines onto a second page reads as careless: the reader
+ * gets a page that is ninety percent white. Trimming a little makes it fit, and
+ * nobody notices they need to until they print it.
+ *
+ * This sits apart from the maximum-length rule: Argentina allows two pages, so
+ * nothing is technically wrong -- it just looks bad.
+ *
+ * It measures the rendered PDF when there is one. The estimate is the fallback,
+ * and it is a poor one here: on the first real resume it claimed twenty-two
+ * lines had spilled when the actual page held three.
+ */
+export const barelySpillsOver: Rule = (resume, ctx) => {
+  let pages: number
+  let lastPageShare: number
+
+  if (ctx.layout) {
+    pages = ctx.layout.pageCount
+    lastPageShare = ctx.layout.lastPageShare
+  } else {
+    const lines = estimateLines(resume)
+    pages = Math.max(1, Math.ceil(lines / LINES_PER_PAGE))
+    lastPageShare = pages < 2 ? 1 : (lines - (pages - 1) * LINES_PER_PAGE) / LINES_PER_PAGE
+  }
+
+  if (pages < 2 || lastPageShare > BARELY_OVER) return []
+
+  return [
+    {
+      id: 'layout/barely-spills',
+      severity: 'warning',
+      section: 'layout',
+      problem: `El CV se pasa por poco a la página ${pages}: queda casi entera en blanco.`,
+      action:
+        'Recortá un poco y entra en una carilla menos. Lo más fácil: acortar el perfil profesional y sacar una o dos viñetas de los trabajos más viejos.',
+    },
+  ]
 }
 
 export const lengthForMarket: Rule = (resume, ctx) => {
-  const pages = estimatePages(resume)
+  // The measured count wins whenever a PDF has been rendered.
+  const pages = ctx.layout?.pageCount ?? estimatePages(resume)
   if (pages <= ctx.profile.maxPages) return []
   return [
     {
@@ -95,4 +145,4 @@ export const lengthForMarket: Rule = (resume, ctx) => {
   ]
 }
 
-export const marketRules: Rule[] = [restrictedFields, lengthForMarket]
+export const marketRules: Rule[] = [restrictedFields, lengthForMarket, barelySpillsOver]

@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { layoutFacts, readPdf, type LayoutFacts } from '@/domain/export/readPdfText'
 import type { Resume } from '@/domain/resume/resumeSchema'
 import { buildPdf, type BuildOptions } from '@/templates/buildPdf'
 
@@ -8,6 +9,7 @@ interface Rendered {
   key: string
   blob: Blob
   url: string
+  layout: LayoutFacts
 }
 
 export interface PreviewState {
@@ -16,6 +18,12 @@ export interface PreviewState {
   url: string | null
   building: boolean
   error: string | null
+  /**
+   * Measured from the rendered file: how many pages it really is, and how full
+   * the last one is. Fed to the analysis engine so the length rules judge the
+   * document rather than a guess about it.
+   */
+  layout: LayoutFacts | null
 }
 
 /**
@@ -41,12 +49,13 @@ export function usePdfPreview(resume: Resume, options: BuildOptions): PreviewSta
 
     const timer = setTimeout(() => {
       buildPdf(resume, options)
-        .then((blob) => {
+        .then(async (blob) => {
+          const layout = layoutFacts(await readPdf(new Uint8Array(await blob.arrayBuffer())))
           if (cancelled) return
           if (latestUrl.current) URL.revokeObjectURL(latestUrl.current)
           const url = URL.createObjectURL(blob)
           latestUrl.current = url
-          setRendered({ key, blob, url })
+          setRendered({ key, blob, url, layout })
           setError(null)
         })
         .catch((cause: unknown) => {
@@ -79,5 +88,6 @@ export function usePdfPreview(resume: Resume, options: BuildOptions): PreviewSta
     url: rendered?.url ?? null,
     building: rendered?.key !== key,
     error,
+    layout: rendered?.layout ?? null,
   }
 }

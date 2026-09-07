@@ -27,6 +27,17 @@ export function stripAccents(text: string): string {
  * cannot actually judge, at the cost of missing some weak bullets. For advice
  * shown to a person, a false positive costs far more than a miss.
  */
+/**
+ * Deverbal noun endings: "Gestión", "Seguimiento", "Preparación", "Asistencia".
+ *
+ * This is the pattern the explicit list below kept missing. A resume bullet that
+ * opens with one of these is describing the NAME of an activity rather than
+ * something the person did -- "Gestión y control administrativo" instead of
+ * "Gestioné y controlé". The check is safe because a Spanish verb form never
+ * ends this way, so it cannot misfire on a bullet that already starts with one.
+ */
+const NOMINALISED_OPENER = /(ion|miento|anza|encia|ancia|aje|azgo|ura)$/
+
 const RESPONSIBILITY_OPENERS = [
   'encargada',
   'encargado',
@@ -49,6 +60,10 @@ const RESPONSIBILITY_OPENERS = [
   'trabajo en',
   'trabaje en el area',
   'atencion al',
+  'desempeno',
+  'desempeno en',
+  'tareas de',
+  'asistencia a',
   'manejo de',
   'gestion de',
   'control de',
@@ -65,7 +80,15 @@ const RESPONSIBILITY_OPENERS = [
 export function startsWithActionVerb(bullet: string): boolean {
   const clean = stripAccents(bullet.trim().toLowerCase()).replace(/^[-•·*\s]+/, '')
   if (!clean) return false
-  return !RESPONSIBILITY_OPENERS.some((weak) => clean.startsWith(weak))
+
+  if (RESPONSIBILITY_OPENERS.some((weak) => clean.startsWith(weak))) return false
+
+  const firstWord = clean.split(/[\s,;:.]+/)[0] ?? ''
+  // "Desempeño" loses its tilde to stripAccents and collides with the verb
+  // "desempeño" (I perform), so it stays on the explicit list rather than here.
+  if (firstWord.length > 4 && NOMINALISED_OPENER.test(firstWord)) return false
+
+  return true
 }
 
 /** `YYYY-MM` to a count of months, for gap arithmetic. */

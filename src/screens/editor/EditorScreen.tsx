@@ -35,8 +35,11 @@ export function EditorScreen({ state }: { state: ResumeState }) {
         profile,
         atsMode: settings.atsMode,
         template: settings.template,
+        // Measured from the rendered file, so the length rules judge the
+        // document instead of guessing at it.
+        ...(preview.layout ? { layout: preview.layout } : {}),
       }),
-    [resume, profile, settings.atsMode, settings.template],
+    [resume, profile, settings.atsMode, settings.template, preview.layout],
   )
 
   /**
