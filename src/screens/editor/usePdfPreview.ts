@@ -9,7 +9,7 @@ interface Rendered {
   key: string
   blob: Blob
   url: string
-  layout: LayoutFacts
+  layout: LayoutFacts | null
 }
 
 export interface PreviewState {
@@ -50,7 +50,18 @@ export function usePdfPreview(resume: Resume, options: BuildOptions): PreviewSta
     const timer = setTimeout(() => {
       buildPdf(resume, options)
         .then(async (blob) => {
-          const layout = layoutFacts(await readPdf(new Uint8Array(await blob.arrayBuffer())))
+          /*
+           * Measuring is an enrichment: it sharpens the length rules. The PDF is
+           * the product. So a failure here costs the page count, never the
+           * preview -- which is exactly what it cost the first time, when a
+           * reader bug turned into "no se pudo armar el PDF".
+           */
+          let layout: LayoutFacts | null = null
+          try {
+            layout = layoutFacts(await readPdf(new Uint8Array(await blob.arrayBuffer())))
+          } catch (cause) {
+            console.warn('No se pudo medir el PDF; la vista previa sigue igual.', cause)
+          }
           if (cancelled) return
           if (latestUrl.current) URL.revokeObjectURL(latestUrl.current)
           const url = URL.createObjectURL(blob)

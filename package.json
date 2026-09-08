@@ -12,7 +12,8 @@
     "test:watch": "vitest",
     "check:layers": "node scripts/check-layers.mjs --self-test && node scripts/check-layers.mjs",
     "lint": "oxlint && npm run typecheck && npm run check:layers",
-    "verify": "npm run lint && npm run test"
+    "verify": "npm run lint && npm run test",
+    "prepare": "husky || true"
   },
   "dependencies": {
     "@react-pdf/renderer": "^4.9.0",
@@ -33,6 +34,8 @@
     "@types/react-dom": "^19.2.4",
     "@vitejs/plugin-react": "^6.1.0",
     "@vitest/coverage-v8": "^5.0.0",
+    "husky": "^9.1.7",
+    "lint-staged": "^16.4.0",
     "oxlint": "^1.79.0",
     "tailwindcss": "^4.3.3",
     "typescript": "~6.0.2",

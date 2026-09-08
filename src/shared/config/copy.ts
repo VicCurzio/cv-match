@@ -52,6 +52,21 @@ export const copy = {
       `${errors} ${errors === 1 ? 'error' : 'errores'} · ${warnings} ${warnings === 1 ? 'advertencia' : 'advertencias'} · ${suggestions} ${suggestions === 1 ? 'sugerencia' : 'sugerencias'}`,
   },
 
+  letter: {
+    open: 'Carta de presentación',
+    title: 'Carta de presentación',
+    subtitle: 'La estructura y tus datos los ponemos nosotros. El párrafo del medio lo escribís vos.',
+    autoLabel: 'Apertura (se arma sola con tus datos)',
+    closingLabel: 'Cierre',
+    bodyHint:
+      'Por qué querés ESTE puesto en ESTA empresa, y qué de lo que hiciste le sirve. Dos o tres oraciones.',
+    unwritten: 'Falta el párrafo del medio. Es el único que no podemos escribir por vos, y es el que se lee.',
+    download: 'Descargar carta',
+    building: 'Armando la carta...',
+    noModel:
+      'No usamos inteligencia artificial para escribir por vos. Una carta que suena bien pero no la escribiste se nota en la entrevista.',
+  },
+
   import: {
     open: 'Importar CV existente',
     title: 'Importar tu CV actual',
@@ -73,6 +88,13 @@ export const copy = {
     label: 'Foto',
     add: 'Subir foto',
     remove: 'Quitar foto',
+    frameTitle: 'Encuadrá tu foto',
+    frameHint: 'Arrastrá para mover y usá la barra para acercar.',
+    frameNote:
+      'Buscá que la cara ocupe buena parte del círculo y quede un poco de aire arriba de la cabeza.',
+    zoom: 'Acercar',
+    use: 'Usar esta foto',
+    saving: 'Guardando...',
     blockedByMarket: 'En este mercado el CV va sin foto, así que la carga está deshabilitada.',
     blockedByAts:
       'Con el filtro automático prendido la foto no se exporta: ningún lector la procesa.',

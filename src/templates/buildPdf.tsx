@@ -1,7 +1,9 @@
 import { pdf } from '@react-pdf/renderer'
+import type { Letter } from '@/domain/letter/letterModel'
 import { applyProfile, type MarketProfile } from '@/domain/market/marketProfile'
 import type { Resume } from '@/domain/resume/resumeSchema'
 import { HarvardResume } from '@/templates/harvard/HarvardResume'
+import { CoverLetter } from '@/templates/letter/CoverLetter'
 import { ModernResume } from '@/templates/modern/ModernResume'
 import { fileName } from '@/templates/shared/format'
 import { disableHyphenation } from '@/templates/shared/typography'
@@ -46,4 +48,24 @@ export async function buildPdf(resume: Resume, options: BuildOptions): Promise<B
 
 export function resumeFileName(resume: Resume): string {
   return fileName(resume)
+}
+
+/**
+ * The cover letter travels with the resume, so it takes the same typeface: the
+ * two arrive in one email and a mismatch reads as two documents pasted together.
+ */
+export async function buildLetterPdf(
+  resume: Resume,
+  letter: Letter,
+  options: BuildOptions,
+): Promise<Blob> {
+  const forExport = applyProfile(resume, options.profile, { atsMode: options.atsMode })
+  const serifHeadings = options.atsMode || options.template === 'harvard'
+  return pdf(
+    <CoverLetter resume={forExport} letter={letter} serifHeadings={serifHeadings} />,
+  ).toBlob()
+}
+
+export function letterFileName(resume: Resume): string {
+  return fileName(resume).replace(/-CV\.pdf$/, '-Carta.pdf')
 }

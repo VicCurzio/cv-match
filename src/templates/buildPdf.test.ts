@@ -1,8 +1,9 @@
 import { describe, expect, it } from 'vitest'
+import { draftLetter } from '@/domain/letter/letterModel'
 import { AR_PROFILE, INTL_PROFILE } from '@/domain/market/marketProfile'
 import { administrativeAr } from '@/test/fixtures'
 import { TINY_JPEG, readPdf } from '@/test/pdfText'
-import { buildPdf } from './buildPdf'
+import { buildLetterPdf, buildPdf } from './buildPdf'
 
 /** The fixture's photo is a placeholder string; the renderer needs real bytes. */
 const withPhoto = {
@@ -107,6 +108,59 @@ describe('the market profile decides what reaches the file', () => {
   it('keeps the document number out of an international export', async () => {
     const pdf = await render({ profile: INTL_PROFILE, atsMode: false, template: 'harvard' })
     expect(pdf.text).not.toContain('35.123.456')
+  })
+})
+
+describe('the cover letter is a real document too', () => {
+  const letter = {
+    ...draftLetter(withPhoto, { role: 'Analista administrativa', company: 'Banco Credicoop' }),
+    body: 'Me interesa el puesto porque quiero seguir creciendo en administración bancaria.',
+  }
+
+  async function renderLetter(options: Parameters<typeof buildLetterPdf>[2]) {
+    const blob = await buildLetterPdf(withPhoto, letter, options)
+    return await readPdf(new Uint8Array(await blob.arrayBuffer()))
+  }
+
+  it('carries selectable text, like the resume', async () => {
+    const pdf = await renderLetter({ profile: AR_PROFILE, atsMode: false, template: 'modern' })
+
+    expect(pdf.text).toContain('Banco Credicoop')
+    expect(pdf.text).toContain('Analista administrativa')
+    expect(pdf.text).toContain('Saludos cordiales,')
+    expect(pdf.text).toContain(withPhoto.personal.fullName)
+  })
+
+  it('fits on a single page', async () => {
+    const pdf = await renderLetter({ profile: AR_PROFILE, atsMode: false, template: 'modern' })
+    expect(pdf.pages).toHaveLength(1)
+  })
+
+  it('never breaks a line with a hyphen', async () => {
+    const pdf = await renderLetter({ profile: AR_PROFILE, atsMode: true, template: 'harvard' })
+    expect(pdf.lines.filter((l) => l.trim() !== '-' && /-$/.test(l.trim()))).toEqual([])
+  })
+
+  /** It travels in the same email as the resume, so it takes the same typeface. */
+  it('uses the serif heading when the resume does', async () => {
+    const withHarvard = await renderLetter({
+      profile: AR_PROFILE,
+      atsMode: true,
+      template: 'harvard',
+    })
+    const withModern = await renderLetter({
+      profile: AR_PROFILE,
+      atsMode: false,
+      template: 'modern',
+    })
+
+    expect(withHarvard.fonts).toContain('Times-Bold')
+    expect(withModern.fonts).not.toContain('Times-Bold')
+  })
+
+  it('never embeds the photo: a cover letter does not carry one', async () => {
+    const pdf = await renderLetter({ profile: AR_PROFILE, atsMode: false, template: 'modern' })
+    expect(pdf.hasImage).toBe(false)
   })
 })
 

@@ -1,6 +1,7 @@
 import { Plus, Trash2 } from 'lucide-react'
+import { useState } from 'react'
 import type { MarketProfile } from '@/domain/market/marketProfile'
-import { compressPhoto } from '@/domain/photo/compressPhoto'
+import { PhotoDialog } from './PhotoDialog'
 import type { Resume } from '@/domain/resume/resumeSchema'
 import { newId } from '@/domain/resume/useResume'
 import { Button } from '@/shared/ui/Button'
@@ -17,21 +18,29 @@ interface Props {
 }
 
 export function ResumeForm({ resume, profile, atsMode, onChange, onPhotoError }: Props) {
+  const [framing, setFraming] = useState<File | null>(null)
   const photoForbidden = profile.fields.photo === 'forbidden'
   const photoDisabled = photoForbidden || atsMode
 
   const patchPersonal = (patch: Partial<Resume['personal']>) =>
     onChange((current) => ({ ...current, personal: { ...current.personal, ...patch } }))
 
-  async function handlePhoto(file: File | undefined) {
-    if (!file) return
-    const result = await compressPhoto(file)
-    if (result.ok) patchPersonal({ photo: result.dataUrl })
-    else onPhotoError(result.message)
+  // The chosen file goes to the framing dialog; only its result is stored.
+  function handlePhoto(file: File | undefined) {
+    if (file) setFraming(file)
   }
 
   return (
     <div className="flex flex-col gap-4">
+      {framing ? (
+        <PhotoDialog
+          file={framing}
+          onDone={(dataUrl) => patchPersonal({ photo: dataUrl })}
+          onError={onPhotoError}
+          onClose={() => setFraming(null)}
+        />
+      ) : null}
+
       <Section title={copy.editor.personal}>
         <div className="grid gap-4 sm:grid-cols-2">
           <TextField
@@ -100,7 +109,11 @@ export function ResumeForm({ resume, profile, atsMode, onChange, onPhotoError }:
                 accept="image/jpeg,image/png,image/webp"
                 className="hidden"
                 disabled={photoDisabled}
-                onChange={(e) => void handlePhoto(e.target.files?.[0])}
+                onChange={(e) => {
+                  handlePhoto(e.target.files?.[0])
+                  // Allow picking the same file again after cancelling.
+                  e.target.value = ''
+                }}
               />
               <span
                 className={
