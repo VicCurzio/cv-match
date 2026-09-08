@@ -2,6 +2,8 @@
 
 Herramienta web para armar, adaptar y descargar un CV. El CV se adapta al mercado al que se manda y a quién lo va a leer: una persona o un filtro automático.
 
+**En vivo: https://viccurzio.github.io/cv-match/**
+
 Todo corre en el navegador. No hay backend, no hay cuentas y el CV no se sube a ningún lado.
 
 ## Qué resuelve
@@ -48,7 +50,7 @@ Tres capas, y las tres hacen falta:
 
 Sitio estático, publicado en GitHub Pages por `.github/workflows/deploy.yml` en cada push a `main`. El workflow corre `npm run verify` antes de construir, así que no se publica nada que no pasaría un commit local.
 
-Para conectarlo la primera vez: creá el repositorio en GitHub, agregalo como remoto, `git push -u origin main`, y en Settings → Pages elegí **GitHub Actions** como origen.
+Para conectarlo la primera vez: creá el repositorio en GitHub, agregalo como remoto, `git push -u origin main`, y en Settings → Pages elegí **GitHub Actions** como origen. Hasta que ese último paso esté hecho, el workflow de deploy falla con `Get Pages site failed`.
 
 `base` está en `./` para que el sitio funcione desde un subdirectorio, que es como Pages sirve un proyecto.
 
