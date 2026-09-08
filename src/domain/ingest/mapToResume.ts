@@ -44,7 +44,40 @@ const BUCKETS = {
 }
 
 const PHONE_RE = /(?:\+?\d{1,3}[\s-]?)?(?:\(?\d{2,4}\)?[\s-]?)?\d{3,4}[\s-]?\d{4}/
+const PHONE_G = new RegExp(PHONE_RE.source, 'g')
 const LINKEDIN_RE = /(?:linkedin\.com\/[\w/-]+)/i
+
+/** Lines that announce a phone number. Checked first, because they are certain. */
+const PHONE_HINT = /\b(tel|telefono|tel[ée]fono|cel|celular|whatsapp|wsp|m[oó]vil|phone|mobile|contacto)\b/i
+
+/** `2018 2021`. A pair of years, not a number anyone can call. */
+const YEAR_RANGE = /^(19|20)\d{2}\s*[-–—/\s]\s*(19|20)\d{2}$/
+
+/** Argentine numbers run to ten digits; nothing shorter than eight is a phone. */
+const MIN_PHONE_DIGITS = 8
+
+/**
+ * The phone, taken from a line that says it is one when there is such a line.
+ *
+ * The plain pattern matched a date range written without punctuation -- an
+ * experience block reading `Administrativa 2018 2021` handed back "2018 2021"
+ * as the person's phone number, and it looked plausible enough to send.
+ */
+function findPhone(lines: string[]): string {
+  return pickPhone(lines.filter((line) => PHONE_HINT.test(line))) || pickPhone(lines)
+}
+
+function pickPhone(lines: string[]): string {
+  for (const line of lines) {
+    for (const candidate of line.match(PHONE_G) ?? []) {
+      const value = candidate.trim()
+      if (YEAR_RANGE.test(value)) continue
+      if (value.replace(/\D/g, '').length < MIN_PHONE_DIGITS) continue
+      return value
+    }
+  }
+  return ''
+}
 
 function normalise(line: string): string {
   return line
@@ -65,12 +98,40 @@ function headingOf(line: string): keyof typeof BUCKETS | null {
   return null
 }
 
-/** Two to five capitalised words and nothing else -- most likely the name. */
+/**
+ * A name word: `Gómez`, or `GÓMEZ`.
+ *
+ * All-caps names were rejected until this second alternative existed, and they
+ * are not an edge case -- printing the name in capitals is the single most
+ * common way a resume opens, so the importer used to miss the name on a large
+ * share of real files.
+ */
+const NAME_WORD = /^(?:[A-ZÁÉÍÓÚÑÜ][a-záéíóúñü'.-]*|[A-ZÁÉÍÓÚÑÜ'.-]{2,})$/
+
+/** Lowercase particles that belong inside a name: "Ana de la Torre". */
+const NAME_PARTICLES = new Set(['de', 'del', 'la', 'las', 'los', 'y', 'da', 'do', 'dos', 'di', 'van', 'von'])
+
+/** What a document calls itself. In capitals it looks exactly like a name. */
+const DOCUMENT_TITLES = new Set([
+  'curriculum',
+  'curriculum vitae',
+  'cv',
+  'hoja de vida',
+  'resume',
+  'datos personales',
+  'informacion personal',
+  'antecedentes personales',
+])
+
+/** Two to six name-shaped words and nothing else -- most likely the name. */
 function looksLikeName(line: string): boolean {
   if (EMAIL_RE.test(line) || /\d/.test(line)) return false
+  if (DOCUMENT_TITLES.has(normalise(line))) return false
+
   const words = line.trim().split(/\s+/)
-  if (words.length < 2 || words.length > 5) return false
-  return words.every((w) => /^[A-ZÁÉÍÓÚÑ][a-záéíóúñü'.-]*$/.test(w))
+  if (words.length < 2 || words.length > 6) return false
+
+  return words.every((word) => NAME_WORD.test(word) || NAME_PARTICLES.has(word.toLowerCase()))
 }
 
 export function mapToResume(lines: string[]): ImportDraft {
@@ -95,7 +156,7 @@ export function mapToResume(lines: string[]): ImportDraft {
 
   const all = lines.join('\n')
   const email = all.match(EMAIL_RE)?.[0] ?? all.match(/[^\s@]+@[^\s@]+\.[^\s@,;]{2,}/)?.[0] ?? ''
-  const phone = all.match(PHONE_RE)?.[0]?.trim() ?? ''
+  const phone = findPhone(lines)
   const linkedin = all.match(LINKEDIN_RE)?.[0] ?? ''
 
   const header = buckets.header

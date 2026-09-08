@@ -135,3 +135,39 @@ describe('parseExperience handles the other common layout', () => {
     expect(parseExperience('')).toEqual([])
   })
 })
+
+/**
+ * The date pattern used to accept "any word followed by a year" as a month.
+ *
+ * `Encargada de depósito 2018 - actualidad` then matched with "depósito" as the
+ * month name, `parseMonth` returned null for it, and the anchor was thrown
+ * away -- so the whole job, its title and its bullets never reached the import.
+ * A resume that writes the dates at the end of the title line, which is most of
+ * them, lost every position it had.
+ */
+describe('a date range is found even when a word sits right before it', () => {
+  it('reads the range when the title runs into the year', () => {
+    expect(dateRangeOf('Encargada de depósito 2018 - actualidad')).toEqual({
+      start: '2018-01',
+      end: null,
+    })
+  })
+
+  it('keeps the job instead of dropping it', () => {
+    const jobs = parseExperience(
+      ['Encargada de depósito 2018 - 2021', '- Coordiné el equipo de recepción.'].join('\n'),
+    )
+
+    expect(jobs).toHaveLength(1)
+    expect(jobs[0]?.role).toBe('Encargada de depósito')
+    expect(jobs[0]?.bullets).toEqual(['Coordiné el equipo de recepción.'])
+  })
+
+  it('still reads a real month name', () => {
+    expect(dateRangeOf('Analista marzo 2021 - actualidad')?.start).toBe('2021-03')
+  })
+
+  it('reads "setiembre", which is how half the country spells it', () => {
+    expect(parseMonth('setiembre 2019')).toBe('2019-09')
+  })
+})

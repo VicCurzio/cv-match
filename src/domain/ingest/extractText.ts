@@ -51,6 +51,46 @@ export async function extractText(file: File): Promise<ExtractResult> {
   return { ok: true, text, lines }
 }
 
+/**
+ * A gap this wide between two runs of the same row is a separator, not a space.
+ *
+ * At the sizes a resume uses, a word space is around three points. Fourteen is
+ * the margin the Harvard template puts between two skills.
+ */
+const GAP_IS_A_SEPARATOR = 6
+
+export interface RowItem {
+  x: number
+  width: number
+  text: string
+}
+
+/**
+ * Joins one visual row, turning wide horizontal gaps into a visible separator.
+ *
+ * A PDF row carries no idea of "columns": `Excel avanzado`, `Tango Gestión` and
+ * `Cuentas corrientes`, drawn side by side as three skills, come back as three
+ * runs whose only difference from three ordinary words is the distance between
+ * them. Joined with a plain space they became one skill called "Excel avanzado
+ * Tango Gestión Cuentas corrientes" -- found by feeding the importer a PDF this
+ * app had just generated.
+ *
+ * The gap is the only signal the format offers, so it is the one used.
+ */
+export function joinRow(items: RowItem[]): string {
+  let out = ''
+  let previousEnd: number | null = null
+
+  for (const item of items) {
+    const gap = previousEnd === null ? 0 : item.x - previousEnd
+    if (out) out += gap > GAP_IS_A_SEPARATOR ? ' · ' : ' '
+    out += item.text
+    previousEnd = item.x + item.width
+  }
+
+  return out.replace(/[ \t]+/g, ' ').trim()
+}
+
 async function readPdf(file: File): Promise<string> {
   const pdfjs = await import('pdfjs-dist')
   // The worker must come from this same site. Loaded from a CDN it works in
@@ -75,12 +115,13 @@ async function readPdf(file: File): Promise<string> {
      * not a bug to fix here -- which is exactly why the extracted result is
      * always shown for review instead of applied blindly.
      */
-    const placed: { x: number; y: number; text: string }[] = []
+    const placed: { x: number; y: number; width: number; text: string }[] = []
     for (const item of content.items) {
       if (!('str' in item) || !item.str.trim()) continue
       placed.push({
         x: item.transform[4] as number,
         y: item.transform[5] as number,
+        width: item.width,
         text: item.str,
       })
     }
@@ -94,7 +135,7 @@ async function readPdf(file: File): Promise<string> {
     const TOLERANCE = 3
     placed.sort((a, b) => b.y - a.y)
 
-    const rows: { x: number; text: string }[][] = []
+    const rows: { x: number; width: number; text: string }[][] = []
     let anchor = Number.POSITIVE_INFINITY
     for (const item of placed) {
       if (Math.abs(item.y - anchor) > TOLERANCE) {
@@ -106,14 +147,7 @@ async function readPdf(file: File): Promise<string> {
 
     pages.push(
       rows
-        .map((row) =>
-          row
-            .sort((a, b) => a.x - b.x)
-            .map((i) => i.text)
-            .join(' ')
-            .replace(/\s+/g, ' ')
-            .trim(),
-        )
+        .map((row) => joinRow(row.sort((a, b) => a.x - b.x)))
         .filter(Boolean)
         .join('\n'),
     )

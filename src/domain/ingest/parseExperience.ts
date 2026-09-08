@@ -7,11 +7,26 @@ const MONTHS: Record<string, string> = {
   jun: '06', junio: '06', june: '06',
   jul: '07', julio: '07', july: '07',
   ago: '08', agosto: '08', aug: '08', august: '08',
-  sep: '09', sept: '09', septiembre: '09', september: '09',
+  // "Setiembre" is how a good part of Argentina spells it.
+  sep: '09', sept: '09', set: '09', septiembre: '09', setiembre: '09', september: '09',
   oct: '10', octubre: '10', october: '10',
   nov: '11', noviembre: '11', november: '11',
   dic: '12', diciembre: '12', dec: '12', december: '12',
 }
+
+/**
+ * The month names, longest first.
+ *
+ * A date pattern has to name the months it accepts. Written as "any word
+ * followed by a year", it swallowed the last word of whatever came before the
+ * date: `Encargada de depósito 2018 - actualidad` matched as the month
+ * "depósito", `parseMonth` then returned null for it, and the whole job -- date
+ * range, title and bullets -- vanished from the import without a trace.
+ */
+export const MONTH_NAMES = Object.keys(MONTHS).sort((a, b) => b.length - a.length)
+
+/** `marzo 2021`, `mar. 2021`, `marzo de 2021`. Never `depósito 2021`. */
+export const NAMED_MONTH_YEAR = String.raw`\b(?:${MONTH_NAMES.join('|')})\.?\s+(?:de\s+)?(?:19|20)\d{2}`
 
 const PRESENT = /\b(actualidad|presente|actual|hoy|present|current)\b/i
 
@@ -46,7 +61,7 @@ export function parseMonth(raw: string): string | null {
   return null
 }
 
-const DATE_PART = String.raw`(?:[a-zA-Zá-úÁ-Ú]+\.?\s+(?:de\s+)?\d{4}|\d{1,2}[-/]\d{4}|\d{4}[-/]\d{1,2}|\d{4})`
+const DATE_PART = String.raw`(?:${NAMED_MONTH_YEAR}|\d{1,2}[-/]\d{4}|\d{4}[-/]\d{1,2}|\d{4})`
 const RANGE_RE = new RegExp(
   String.raw`(${DATE_PART})\s*(?:-|–|—|a|hasta|to)\s*(${DATE_PART}|actualidad|presente|actual|hoy|present|current)`,
   'i',
@@ -107,7 +122,10 @@ export function parseExperience(text: string): ParsedExperience[] {
   const titles = anchors.map((anchor) => {
     // The title may share the date's line, sit above it, or -- when the layout
     // puts dates on their own row -- sit just below it.
-    const inline = anchor.line.replace(RANGE_RE, '').replace(/[\s|,;-]+$/, '').trim()
+    // The middle dot is in the strip set because the extractor writes one
+    // wherever a wide gap separated two runs of the same row -- which is exactly
+    // what sits between a job title and the dates drawn at the far margin.
+    const inline = anchor.line.replace(RANGE_RE, '').replace(/[\s|,;·-]+$/, '').trim()
     if (inline) return inline
 
     const above = lines[anchor.index - 1]

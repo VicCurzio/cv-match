@@ -91,6 +91,48 @@ describe('nothing is dropped in silence', () => {
   })
 })
 
+/**
+ * What it returns as a phone has to be a phone. A wrong number is worse than no
+ * number: the person applies and waits for a call that cannot arrive.
+ */
+describe('the phone it finds is a phone', () => {
+  it('does not read a pair of years as a phone number', () => {
+    const draft = mapToResume([
+      'Ana Gómez Ruiz',
+      'EXPERIENCIA LABORAL',
+      'Administrativa comercial 2018 2021',
+    ])
+    expect(draft.phone).toBe('')
+  })
+
+  it('prefers the line that announces one', () => {
+    const draft = mapToResume([
+      'Ana Gómez Ruiz',
+      'Administrativa comercial 2018 2021',
+      'Tel: 221 555-0100',
+    ])
+    expect(draft.phone).toContain('555-0100')
+  })
+})
+
+/** Printing the name in capitals is the most common way a resume opens. */
+describe('it reads a name written in capitals', () => {
+  it('takes an all-caps line as the name', () => {
+    const draft = mapToResume(['ANA GÓMEZ RUIZ', 'Administrativa comercial'])
+    expect(draft.fullName).toBe('ANA GÓMEZ RUIZ')
+  })
+
+  it('keeps the particles of a longer name together', () => {
+    const draft = mapToResume(['Ana de la Torre Gómez', 'Administrativa comercial'])
+    expect(draft.fullName).toBe('Ana de la Torre Gómez')
+  })
+
+  it('does not mistake the document title for the name', () => {
+    const draft = mapToResume(['CURRICULUM VITAE', 'Ana Gómez Ruiz'])
+    expect(draft.fullName).toBe('Ana Gómez Ruiz')
+  })
+})
+
 describe('it degrades without crashing', () => {
   it('handles an empty document', () => {
     const draft = mapToResume([])
