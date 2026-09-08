@@ -67,6 +67,20 @@ describe('no word is ever hyphenated across lines', () => {
     const broken = pdf.lines.filter((l) => /\w-$/.test(l.trim()))
     expect(broken).toEqual([])
   })
+
+  /**
+   * A narrower check missed this one. The skills line ended `... Negociación ·-`
+   * because react-pdf treats the middle dot as a break opportunity and emits a
+   * hyphen there -- a hyphen after punctuation, which `\w-$` does not match.
+   * The fix was to stop joining lists into one long string.
+   */
+  it('never ends a line with a hyphen, whatever precedes it', async () => {
+    for (const template of ['harvard', 'modern'] as const) {
+      const pdf = await render({ profile: AR_PROFILE, atsMode: false, template })
+      const broken = pdf.lines.filter((l) => l.trim() !== '-' && /-$/.test(l.trim()))
+      expect(broken, `${template} broke a line with a hyphen`).toEqual([])
+    }
+  })
 })
 
 /**

@@ -43,7 +43,7 @@ const styles = StyleSheet.create({
     marginTop: 5,
     color: PAGE.inkSoft,
   },
-  section: { marginTop: 15 },
+  section: { marginTop: 11 },
   sectionTitle: {
     fontFamily: 'Times-Bold',
     fontSize: 11,
@@ -51,10 +51,10 @@ const styles = StyleSheet.create({
     borderBottomWidth: 0.8,
     borderBottomColor: PAGE.ink,
     paddingBottom: 2,
-    marginBottom: 7,
+    marginBottom: 5,
   },
   summary: { fontSize: 10, textAlign: 'justify' },
-  entry: { marginBottom: 9 },
+  entry: { marginBottom: 7 },
   entryHead: { flexDirection: 'row', justifyContent: 'space-between' },
   role: { fontFamily: 'Helvetica-Bold', fontSize: 10.5 },
   dates: { fontSize: 9, color: PAGE.inkFaint },
@@ -62,7 +62,17 @@ const styles = StyleSheet.create({
   bulletRow: { flexDirection: 'row', marginBottom: 1.5 },
   bulletMark: { width: 10, fontSize: 10 },
   bulletText: { flex: 1, fontSize: 10 },
-  inlineList: { fontSize: 10 },
+  /*
+   * A wrapping row of separate items, not one joined string.
+   *
+   * Joining with a separator produced `... Negociación  ·-` at the line break:
+   * react-pdf treats the middle dot as a break opportunity and emits a hyphen
+   * there, and the hyphenation callback does not cover it because it is not a
+   * word being split. With one element per item the break falls between
+   * elements, where there is nothing to hyphenate.
+   */
+  tagRow: { flexDirection: 'row', flexWrap: 'wrap' },
+  tag: { fontSize: 10, marginRight: 14 },
 })
 
 interface Props {
@@ -148,15 +158,25 @@ export function HarvardResume({ resume }: Props) {
 
         {skills.length > 0 ? (
           <Section title="HABILIDADES">
-            <Text style={styles.inlineList}>{skills.join('  ·  ')}</Text>
+            <View style={styles.tagRow}>
+              {skills.map((skill, index) => (
+                <Text key={index} style={styles.tag}>
+                  {skill}
+                </Text>
+              ))}
+            </View>
           </Section>
         ) : null}
 
         {resume.languages.length > 0 ? (
           <Section title="IDIOMAS">
-            <Text style={styles.inlineList}>
-              {resume.languages.map((l) => `${l.name} (${l.level})`).join('  ·  ')}
-            </Text>
+            <View style={styles.tagRow}>
+              {resume.languages.map((language) => (
+                <Text key={language.id} style={styles.tag}>
+                  {language.name} ({language.level})
+                </Text>
+              ))}
+            </View>
           </Section>
         ) : null}
       </Page>
