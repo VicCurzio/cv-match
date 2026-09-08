@@ -9,6 +9,17 @@ import { RESUME_VERSION, resumeSchema, type Resume } from './resumeSchema'
 
 const STORAGE_KEY = 'cv-match:document'
 
+/**
+ * Where an unreadable document is put aside before anything can overwrite it.
+ *
+ * A saved document that no longer parses -- a half-written record, or one from a
+ * future schema version -- used to be treated exactly like an empty browser: the
+ * app started blank and the autosave replaced it within half a second. That is
+ * the single worst failure this app has, because it is silent and the resume
+ * lives nowhere else.
+ */
+const BACKUP_KEY = 'cv-match:unreadable'
+
 export const settingsSchema = z.object({
   market: z.enum(['AR', 'INTL']),
   atsMode: z.boolean(),
@@ -75,20 +86,74 @@ export function saveDocument(doc: StoredDocument): SaveResult {
   }
 }
 
-export function loadDocument(): StoredDocument | null {
+export type LoadResult =
+  /** Nothing saved, or storage is unreachable: a legitimate blank start. */
+  | { status: 'empty' }
+  | { status: 'ok'; doc: StoredDocument }
+  /** Something was saved and cannot be read. The raw text comes back so it can
+   *  be handed to the person instead of being overwritten. */
+  | { status: 'unreadable'; raw: string }
+
+/**
+ * Reads the saved document, telling "there is nothing" apart from "there is
+ * something I cannot read". Those two used to be the same answer, and the
+ * second one silently cost the resume.
+ */
+export function loadDocument(): LoadResult {
   let raw: string | null = null
   try {
     raw = localStorage.getItem(STORAGE_KEY)
   } catch {
-    return null
+    return { status: 'empty' }
   }
-  if (!raw) return null
+  if (!raw) return { status: 'empty' }
 
+  let parsed: unknown
   try {
-    const parsed = documentSchema.safeParse(JSON.parse(raw))
-    return parsed.success ? parsed.data : null
+    parsed = JSON.parse(raw)
+  } catch {
+    return unreadable(raw)
+  }
+
+  const result = documentSchema.safeParse(parsed)
+  return result.success ? { status: 'ok', doc: result.data } : unreadable(raw)
+}
+
+/**
+ * Puts the unreadable text aside under its own key, so it survives the autosave
+ * that is about to write over the document. Best effort: if the copy cannot be
+ * made, the raw text still travels back in memory for the person to download.
+ */
+function unreadable(raw: string): LoadResult {
+  try {
+    localStorage.setItem(BACKUP_KEY, raw)
+  } catch {
+    /* no room for a copy; the in-memory one is what is left */
+  }
+  return { status: 'unreadable', raw }
+}
+
+/**
+ * The set-aside copy, if there is one.
+ *
+ * Read on every start, not only on the start that put it there: the autosave
+ * replaces the broken document immediately, so from the next reload onwards the
+ * copy would be invisible -- sitting in storage, eating quota, offered to
+ * nobody.
+ */
+export function readBackup(): string | null {
+  try {
+    return localStorage.getItem(BACKUP_KEY)
   } catch {
     return null
+  }
+}
+
+export function clearBackup(): void {
+  try {
+    localStorage.removeItem(BACKUP_KEY)
+  } catch {
+    /* nothing to clear if storage is unavailable */
   }
 }
 

@@ -58,8 +58,18 @@ export const personalSchema = z.object({
   linkedin: z.string().optional(),
   website: z.string().optional(),
 
-  /** Square JPEG data URL, already compressed. See `domain/photo`. */
-  photo: z.string().optional(),
+  /**
+   * Square JPEG data URL, already compressed. See `domain/photo`.
+   *
+   * The shape is checked, not just the type. Everything else here is the
+   * person's own text, rendered as text; this one value is handed straight to
+   * an `<img src>` and to the PDF renderer, and it can arrive from a `.json`
+   * file that this app did not write. Only a real base64 image data URL gets in.
+   */
+  photo: z
+    .string()
+    .regex(/^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+/]+={0,2}$/, 'La foto no es una imagen.')
+    .optional(),
   documentId: z.string().optional(),
   birthDate: z.string().optional(),
   maritalStatus: z.string().optional(),
@@ -91,6 +101,21 @@ export const RESTRICTABLE_FIELDS = [
 ] as const
 
 export type RestrictableField = (typeof RESTRICTABLE_FIELDS)[number]
+
+/**
+ * How each restrictable field is named to the person, with its article.
+ *
+ * It lives beside the field list rather than inside a rule: the market notice in
+ * the editor and the analysis findings say the same words about the same field,
+ * and a second copy of these labels is a second copy that drifts.
+ */
+export const FIELD_LABEL: Record<RestrictableField, string> = {
+  photo: 'la foto',
+  documentId: 'el número de documento',
+  birthDate: 'la fecha de nacimiento',
+  maritalStatus: 'el estado civil',
+  nationality: 'la nacionalidad',
+}
 
 export const emptyResume = (): Resume => ({
   personal: {

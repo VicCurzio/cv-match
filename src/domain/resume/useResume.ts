@@ -1,8 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { RESUME_VERSION, emptyResume, type Resume } from './resumeSchema'
 import {
+  clearBackup,
   defaultSettings,
   loadDocument,
+  readBackup,
   saveDocument,
   type SaveResult,
   type Settings,
@@ -17,6 +19,12 @@ export interface ResumeState {
   /** Set when a save failed, so the UI can say so instead of losing data quietly. */
   saveError: string | null
   hasSaved: boolean
+  /**
+   * The raw text of a saved document that could not be read. The autosave is
+   * about to write over it, so the UI offers it as a download first.
+   */
+  unreadable: string | null
+  dismissUnreadable: () => void
   setResume: (next: Resume | ((current: Resume) => Resume)) => void
   setSettings: (patch: Partial<Settings>) => void
   replaceAll: (resume: Resume) => void
@@ -25,9 +33,16 @@ export interface ResumeState {
 
 export function useResume(): ResumeState {
   const [stored] = useState(() => loadDocument())
-  const [resume, setResumeState] = useState<Resume>(() => stored?.resumes.es ?? emptyResume())
-  const [settings, setSettingsState] = useState<Settings>(
-    () => stored?.settings ?? defaultSettings(),
+  const [resume, setResumeState] = useState<Resume>(() =>
+    stored.status === 'ok' ? stored.doc.resumes.es : emptyResume(),
+  )
+  const [settings, setSettingsState] = useState<Settings>(() =>
+    stored.status === 'ok' ? stored.doc.settings : defaultSettings(),
+  )
+  // Either the document that just failed to parse, or one set aside on an
+  // earlier visit and never claimed.
+  const [unreadable, setUnreadable] = useState<string | null>(() =>
+    stored.status === 'unreadable' ? stored.raw : readBackup(),
   )
   const [saveError, setSaveError] = useState<string | null>(null)
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -71,11 +86,18 @@ export function useResume(): ResumeState {
 
   const replaceAll = useCallback((next: Resume) => setResumeState(next), [])
 
+  const dismissUnreadable = useCallback(() => {
+    clearBackup()
+    setUnreadable(null)
+  }, [])
+
   return {
     resume,
     settings,
     saveError,
-    hasSaved: stored !== null,
+    hasSaved: stored.status === 'ok',
+    unreadable,
+    dismissUnreadable,
     setResume,
     setSettings,
     replaceAll,
