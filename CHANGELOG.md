@@ -7,6 +7,19 @@ Versionado según [SemVer](https://semver.org/lang/es/).
 
 ### Agregado
 
+- **Encuadre de la foto**: arrastrar para mover y una barra para acercar, en vez del cuadrado centrado automático. La matemática del recorte vive como función pura en `domain/photo/cropRect.ts`.
+- **Carta de presentación** en PDF, con la misma tipografía y márgenes que el CV. La estructura y los datos del CV se completan solos; el párrafo del medio lo escribe la persona, y sin él no se puede descargar.
+- **Error boundary de raíz**, que ante una excepción ofrece bajar una copia del CV antes de recargar.
+- Hook de pre-commit (husky + lint-staged) y verificación en CI.
+- Despliegue automático a GitHub Pages.
+
+### Arreglado
+
+- El lector de PDF cortaba los streams mal: buscaba `endstream` y recortaba los saltos de línea finales, pero los datos comprimidos pueden terminar legítimamente en `0x0A` o `0x0D`. Ahora usa el `/Length` declarado. El síntoma era la vista previa entera caída con "No se pudo armar el PDF", y solo en los documentos que caían justo en ese caso.
+- Medir el PDF es un extra: si falla, ya no se lleva puesta la vista previa.
+
+### Agregado antes
+
 - Importar un CV existente en `.pdf` o `.docx`, leído enteramente en el navegador. El formato se detecta por contenido y no por extensión; el `.doc` anterior a 2007 y los CV escaneados se rechazan con una salida concreta. Lo extraído se muestra para revisar antes de aplicarse, y lo que no se pudo ubicar se lista en vez de descartarse.
 - Lector de texto de PDF para los tests (`src/test/pdfText.ts`), que verifica sobre el archivo generado —y no sobre el código que lo genera— que hay texto seleccionable, que no se corta ninguna palabra y que la foto no llega a donde no debe.
 

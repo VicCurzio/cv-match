@@ -36,9 +36,21 @@ npm run dev
 | `npm run lint` | oxlint + typecheck + capas |
 | `npm run verify` | Todo lo anterior más los tests |
 
+## Verificación
+
+Tres capas, y las tres hacen falta:
+
+- **`npm run verify`** a mano, cuando querés saber si algo se rompió.
+- **Hook de pre-commit** (husky + lint-staged): corre linter, tipos y la regla de capas antes de cada commit. Es feedback rápido, no una garantía — se saltea con `--no-verify`.
+- **CI** (`.github/workflows/verify.yml`): corre `npm run verify` en cada push y cada pull request. Esa es la que no se puede saltear.
+
 ## Cómo se despliega
 
-Sitio estático. `npm run build` deja todo en `dist/`, que se publica tal cual en GitHub Pages o cualquier hosting estático. `base` está en `./` para que funcione desde un subdirectorio.
+Sitio estático, publicado en GitHub Pages por `.github/workflows/deploy.yml` en cada push a `main`. El workflow corre `npm run verify` antes de construir, así que no se publica nada que no pasaría un commit local.
+
+Para conectarlo la primera vez: creá el repositorio en GitHub, agregalo como remoto, `git push -u origin main`, y en Settings → Pages elegí **GitHub Actions** como origen.
+
+`base` está en `./` para que el sitio funcione desde un subdirectorio, que es como Pages sirve un proyecto.
 
 ## Arquitectura, en corto
 
@@ -74,6 +86,8 @@ Y se autoverifica: `--self-test` le da un import que **tiene** que rechazar y fa
 **El motor de reglas es puro.** `runAnalysis(resume, ctx)` no toca la red, ni estado, ni el reloj. Por eso se testea contra fixtures en milisegundos.
 
 **No hay ningún modelo de lenguaje.** `domain/generate/generator.ts` define el puerto y `nullGenerator` es la única implementación. La aplicación entera tiene que seguir funcionando con él.
+
+Eso también decide cómo funciona la **carta de presentación**: la estructura y los datos que ya están en el CV se completan solos, y el párrafo que explica por qué esta persona quiere este puesto queda para ella. Un párrafo que suena bien pero no lo escribió nadie es peor que uno en blanco, porque se manda igual y después hay que defenderlo en una entrevista. El botón de descargar está deshabilitado mientras ese párrafo siga siendo el texto de guía.
 
 ## Tests
 
