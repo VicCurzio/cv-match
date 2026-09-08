@@ -52,6 +52,34 @@ Para conectarlo la primera vez: creá el repositorio en GitHub, agregalo como re
 
 `base` está en `./` para que el sitio funcione desde un subdirectorio, que es como Pages sirve un proyecto.
 
+## Privacidad, y cómo se hace cumplir
+
+La regla central del proyecto es que **el CV nunca sale de la máquina**. No hay servidor al que mandarlo, no hay analítica y no hay una sola llamada de red en el código.
+
+Eso último es una propiedad del código de hoy, así que además hay una **Content-Security-Policy** que la convierte en una regla que aplica el navegador: con `connect-src 'self'`, ni un script inyectado ni una dependencia que decida llamar a casa pueden alcanzar otro origen.
+
+Va como `meta` porque GitHub Pages sirve archivos estáticos y no pone encabezados, y se inyecta **solo en el build** (`contentSecurityPolicy()` en `vite.config.ts`): en desarrollo la misma política bloquearía el websocket de Vite.
+
+Si tocás esa política, **probala sobre el sitio construido**, no sobre el servidor de desarrollo. Cada directiva de ahí está porque algo la necesita, y una de más rompe únicamente en producción:
+
+| Directiva | Por qué |
+|---|---|
+| `'wasm-unsafe-eval'` | `@react-pdf/renderer` compila un módulo WebAssembly para maquetar el texto. Sin esto el PDF no se arma. Permite WebAssembly y nada más: `eval` y `new Function` siguen bloqueados |
+| `frame-src blob:` | La vista previa muestra el PDF generado como blob URL |
+| `worker-src blob:` | pdfjs cae a un worker de tipo blob |
+| `img-src data:` | La foto de perfil se guarda como data URL |
+| `style-src 'unsafe-inline'` | React escribe atributos `style` |
+
+El otro punto donde entra dato ajeno es el `.json` importado: se valida entero con zod antes de tocar el estado, y la foto se valida **por forma** además de por tipo, porque es el único valor que va directo a un `<img src>` y al renderizador de PDF.
+
+## Accesibilidad
+
+- Los tres diálogos comparten `shared/ui/Dialog`: cierran con Escape, contienen el foco mientras están abiertos y lo devuelven al botón que los abrió.
+- Los controles de archivo usan un `input` `sr-only`, nunca `display: none`. Un input oculto con `display: none` no recibe foco, así que el control existe para el mouse y no para el teclado.
+- Los avisos que aparecen en reacción a algo son regiones vivas (`role="status"`).
+- La severidad de un hallazgo nunca se comunica solo con color: cada uno lleva ícono y etiqueta escrita.
+- `prefers-reduced-motion` apaga las transiciones, y hay un `:focus-visible` global.
+
 ## Arquitectura, en corto
 
 Corte primario por dominio de negocio. La regla de dependencia va en un solo sentido:
@@ -64,7 +92,7 @@ screens  ---------------->  domain
 ```
 src/
   screens/     una carpeta por pantalla
-  domain/      resume · market · analysis · photo · export · generate
+  domain/      resume · market · analysis · photo · letter · export · ingest · generate
   templates/   harvard/ y modern/, dibujadas con react-pdf
   shared/      ui · utils · config
 ```
@@ -99,18 +127,26 @@ Se testea el núcleo, no la interfaz:
 
 - El motor de reglas contra un fixture que reproduce los defectos de un CV real (`src/test/fixtures.ts`). **Los datos de contacto del fixture son inventados**: datos personales reales no entran a un repo.
 - El cruce de mercados: el mismo CV con foto pasa el perfil argentino y falla el internacional.
-- La validación del `.json` importado.
+- La validación del `.json` importado, y qué pasa con uno guardado que ya no se puede leer.
 - Un control que se verifica a sí mismo: un CV que el modo ATS **tiene** que rechazar.
+
+Tres de ellos vale la pena conocerlos antes de tocar lo que verifican:
+
+**El PDF se mide, no se lee.** `readPdfText.ts` calcula **dónde** cae cada línea de texto, rastreando la pila de transformaciones del PDF. Estar en el archivo y estar en la hoja son cosas distintas, y solo la segunda se imprime: un test que buscara los puestos en el texto extraído pasa contento sobre una plantilla que los dibuja fuera del papel. Ese fue exactamente el primer intento.
+
+**El importador se prueba contra la salida de la propia app.** `roundTrip.test.ts` genera el PDF de un CV y lo vuelve a importar. Todos los demás tests del importador le dan texto escrito a mano, que es texto con la forma que imaginó quien escribió el test. Este toma los bytes reales de una exportación real, y es la red de regresión más barata que hay: un cambio en una plantilla, en el lector de PDF o en cualquier parser aparece ahí.
+
+**Lo que un navegador no puede contestar en un test se saca a una función pura.** El recorte de la foto (`domain/photo/cropRect.ts`) y hacia dónde salta el foco al llegar al borde de un diálogo (`shared/utils/focusTrap.ts`) son las dos piezas que deciden algo importante y que no se pueden verificar leyendo.
 
 ## Limitaciones conocidas
 
 - El bundle pesa alrededor de 1,5 MB sin comprimir, casi todo `@react-pdf/renderer`. Se puede recortar con carga diferida cuando moleste.
 - La foto se guarda en el navegador. El cupo total ronda los 5 MB, por eso se comprime a 400x400 antes de guardarla; sin eso una foto de celular llena el cupo y el navegador deja de guardar sin avisar.
 - La fuente del PDF es una de las estándar del formato (Helvetica y Times-Roman). Cubren los acentos y la ñ sin embeber nada. Cambiar a una fuente propia obliga a registrarla con `Font.register`.
-- Importar un CV de dos columnas devuelve el texto entremezclado: el PDF no guarda columnas, guarda posiciones. Por eso lo extraído siempre se muestra para revisar antes de aplicarse.
+- Importar un CV de dos columnas puede devolver el texto entremezclado: el PDF no guarda columnas, guarda posiciones. Un hueco horizontal ancho se lee como separador, lo que ayuda, pero no lo resuelve del todo. Por eso lo extraído siempre se muestra para revisar antes de aplicarse.
 - Un CV escaneado, o exportado como imagen desde una herramienta de diseño, no se puede importar. La app lo detecta y lo dice; los datos hay que cargarlos a mano.
 - El `.doc` anterior a 2007 no se lee: es un binario propietario sin librería de JavaScript razonable. La app pide guardarlo como `.docx` o PDF.
-- El recorte de la foto es automático (el cuadrado centrado más grande). No hay control manual de encuadre todavía.
+- El importador adivina. Anclarse en las fechas y en los huecos funciona con la mayoría de los CV, pero una maqueta rara lo desordena; para eso está el paso de revisión, y las líneas que no supo ubicar se listan en vez de descartarse.
 
 ## Licencia
 
