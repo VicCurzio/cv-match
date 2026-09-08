@@ -64,12 +64,95 @@ describe('it survives streams whose data ends in a newline', () => {
     expect(contents.lines).toEqual([])
   })
 
-  it('returns a usable measurement for an empty read', () => {
+})
+
+/**
+ * The vertical tracking, on a document written by hand rather than by react-pdf.
+ *
+ * `offPage` is what tells "the text is in the file" from "the text is on the
+ * paper", and it is the assertion the long-resume test rests on -- so it gets
+ * checked against a stream whose expected answer is known by construction,
+ * not only against whatever the renderer happens to produce.
+ *
+ * react-pdf never writes an absolute position: it flips the page upside down,
+ * nests `cm` translations inside `q`/`Q`, and then draws every string at the
+ * same text matrix. The two blocks below are that exact shape, one placed 51
+ * units from the top and one pushed 900 units down -- past the bottom of an A4.
+ */
+describe('it knows where on the page a line was drawn', () => {
+  const onPaper = `
+q
+1 0 0 1 51 51 cm
+q
+1 0 0 -1 0 842 cm
+BT
+1 0 0 1 0 842 Tm
+/F1 10 Tf
+[<41>] TJ
+ET
+Q
+Q`
+
+  const pastTheBottom = `
+q
+1 0 0 1 51 900 cm
+q
+1 0 0 -1 0 842 cm
+BT
+1 0 0 1 0 842 Tm
+/F1 10 Tf
+[<42>] TJ
+ET
+Q
+Q`
+
+  async function pdfOf(content: string): Promise<Uint8Array> {
+    const compressed = new Uint8Array(
+      await new Response(
+        new Blob([`1 0 0 -1 0 842 cm${content}`])
+          .stream()
+          .pipeThrough(new CompressionStream('deflate')),
+      ).arrayBuffer(),
+    )
+
+    const head = `%PDF-1.3\n/MediaBox [0 0 595.28 841.89]\n<< /Length ${compressed.length} >>\nstream\n`
+    const tail = '\nendstream\n%%EOF'
+    const ascii = (text: string) => [...text].map((c) => c.charCodeAt(0))
+
+    return new Uint8Array([...ascii(head), ...compressed, ...ascii(tail)])
+  }
+
+  it('reads a line that sits inside the page as on the page', async () => {
+    const contents = await readPdf(await pdfOf(onPaper))
+
+    expect(contents.pages).toEqual([['A']])
+    expect(contents.offPage).toEqual([])
+  })
+
+  it('reports a line drawn past the bottom edge', async () => {
+    const contents = await readPdf(await pdfOf(pastTheBottom))
+
+    // Still in the file -- which is exactly why reading the text is not enough.
+    expect(contents.text).toContain('B')
+    expect(contents.offPage).toEqual(['B'])
+  })
+
+  it('separates the two within one page', async () => {
+    const contents = await readPdf(await pdfOf(onPaper + pastTheBottom))
+
+    expect(contents.pages).toEqual([['A', 'B']])
+    expect(contents.offPage).toEqual(['B'])
+  })
+})
+
+describe('layoutFacts', () => {
+  it('handles an empty document', () => {
     const facts = layoutFacts({
       bytes: 0,
       pages: [],
       lines: [],
       text: '',
+      offPage: [],
       hasImage: false,
       fonts: [],
     })

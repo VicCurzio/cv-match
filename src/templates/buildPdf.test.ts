@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { draftLetter } from '@/domain/letter/letterModel'
 import { AR_PROFILE, INTL_PROFILE } from '@/domain/market/marketProfile'
-import { administrativeAr } from '@/test/fixtures'
+import { administrativeAr, longAr } from '@/test/fixtures'
 import { TINY_JPEG, readPdf } from '@/test/pdfText'
 import { buildLetterPdf, buildPdf } from './buildPdf'
 
@@ -162,6 +162,88 @@ describe('the cover letter is a real document too', () => {
     const pdf = await renderLetter({ profile: AR_PROFILE, atsMode: false, template: 'modern' })
     expect(pdf.hasImage).toBe(false)
   })
+})
+
+/**
+ * The failure this suite could not see: a resume longer than one page.
+ *
+ * Both templates marked each section `wrap={false}`, which does not mean "keep
+ * this together" so much as "this may never be split". The layout engine then
+ * has nowhere to put a section taller than a page, and it does not fail: it
+ * packs every line onto the one page anyway. Twenty jobs came out as 226 lines
+ * printed over each other inside a single sheet in the Harvard template, and as
+ * a layout that gave up entirely in the Modern one -- a run positioned at minus
+ * nineteen million.
+ *
+ * The trap is that all of that text is still IN the file. The first version of
+ * this test looked for the job titles in the extracted text and passed happily
+ * on the broken template. What is missing is the paper underneath them.
+ */
+describe('a resume longer than one page keeps all of its content on the paper', () => {
+  for (const template of ['harvard', 'modern'] as const) {
+    it(`draws nothing past the bottom edge, in ${template}`, async () => {
+      const blob = await buildPdf(longAr, { profile: AR_PROFILE, atsMode: false, template })
+      const pdf = await readPdf(new Uint8Array(await blob.arrayBuffer()))
+
+      expect(pdf.offPage, `${template} drew text outside the page`).toEqual([])
+    })
+
+    it(`spills onto a second page instead of overflowing the first, in ${template}`, async () => {
+      const blob = await buildPdf(longAr, { profile: AR_PROFILE, atsMode: false, template })
+      const pdf = await readPdf(new Uint8Array(await blob.arrayBuffer()))
+
+      expect(pdf.pages.length).toBeGreaterThan(1)
+
+      // Every job reaches the file, including the ones past the first page.
+      for (const job of longAr.experience) {
+        expect(pdf.text, `"${job.role}" did not reach the file`).toContain(job.role)
+      }
+      // And the section that comes after the long one is still there.
+      expect(pdf.text).toContain('Universidad Nacional de La Plata')
+    })
+  }
+})
+
+/**
+ * The same rule pushed until it cannot be satisfied on two pages at all.
+ *
+ * A career this long is unusual; the point is that the number of pages has to
+ * follow the amount of content, however much there is. An A4 page at 10pt holds
+ * around 57 lines, and the templates draw at most two runs on a line (a bullet
+ * and its mark, a job title and its dates), so anything past ~120 runs on one
+ * page is text printed on top of other text.
+ */
+describe('the page count follows the content, however long it gets', () => {
+  const RUNS_AN_A4_PAGE_CAN_HOLD = 120
+
+  const twentyJobs = {
+    ...longAr,
+    experience: Array.from({ length: 20 }, (_, job) => ({
+      id: `exp-${job + 1}`,
+      role: `Analista administrativa ${job + 1}`,
+      company: `Distribuidora ${job + 1}`,
+      startDate: `${1990 + job}-03`,
+      endDate: `${1991 + job}-11`,
+      bullets: Array.from(
+        { length: 4 },
+        (_, bullet) => `Gestioné ${bullet + 1}0 cuentas del puesto ${job + 1} con cierre mensual.`,
+      ),
+    })),
+  }
+
+  for (const template of ['harvard', 'modern'] as const) {
+    it(`does not pile twenty jobs onto one sheet, in ${template}`, async () => {
+      const blob = await buildPdf(twentyJobs, { profile: AR_PROFILE, atsMode: false, template })
+      const pdf = await readPdf(new Uint8Array(await blob.arrayBuffer()))
+
+      expect(pdf.offPage, `${template} drew text outside the page`).toEqual([])
+      for (const [index, page] of pdf.pages.entries()) {
+        expect(page.length, `${template} crammed page ${index + 1}`).toBeLessThanOrEqual(
+          RUNS_AN_A4_PAGE_CAN_HOLD,
+        )
+      }
+    })
+  }
 })
 
 describe('ATS mode forces the single-column template', () => {

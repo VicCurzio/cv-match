@@ -18,6 +18,16 @@ export interface PdfContents {
   /** Every run, flattened. */
   lines: string[]
   text: string
+  /**
+   * Runs drawn outside the paper, below the bottom edge.
+   *
+   * Being IN the file and being ON the page are different things, and only the
+   * second one gets printed or read. A block the layout engine was told it may
+   * not split keeps drawing past the end of the sheet: the text is in the
+   * content stream, so any check that only looks at the extracted text passes,
+   * and the person sends a resume with half their jobs invisible.
+   */
+  offPage: string[]
   /** True when a raster image is embedded (the photo). */
   hasImage: boolean
   fonts: string[]
@@ -32,23 +42,88 @@ async function inflate(bytes: Uint8Array): Promise<Uint8Array> {
   return new Uint8Array(await new Response(stream).arrayBuffer())
 }
 
+export interface TextRun {
+  text: string
+  /** Baseline height in PDF units, measured from the bottom edge of the paper. */
+  y: number
+}
+
+/**
+ * `q`, `Q`, a translation matrix, or a text-drawing operator. One pass over the
+ * content stream reads all four.
+ */
+const NUMBER = String.raw`-?\d*\.?\d+`
+const TOKEN = new RegExp(
+  String.raw`\bq\b|\bQ\b|(${NUMBER})\s+(${NUMBER})\s+(${NUMBER})\s+(${NUMBER})\s+(${NUMBER})\s+(${NUMBER})\s+(cm|Tm)|(\[[^\]]*\])\s*TJ`,
+  'g',
+)
+
+function decodeHex(block: string): string {
+  const hex = (block.match(/<[0-9a-fA-F]+>/g) ?? []).map((h) => h.slice(1, -1)).join('')
+  let out = ''
+  for (let i = 0; i < hex.length; i += 2) {
+    out += String.fromCharCode(Number.parseInt(hex.slice(i, i + 2), 16))
+  }
+  return out
+}
+
 /**
  * Text is drawn with `TJ` over arrays of hex glyph codes with kerning between
  * them: `[<43> -111 <4f>] TJ`. The standard fonts use WinAnsiEncoding, which is
  * Latin-1, so decoding byte by byte gives back the real characters -- accents
  * and the enye included.
+ *
+ * Where each run lands takes a little more work: react-pdf never writes an
+ * absolute position, it nests `cm` translations inside `q`/`Q` pairs and then
+ * draws every string at the same text matrix. So the height of a run is the
+ * accumulated translation of the graphics stack at the moment it is drawn --
+ * which means tracking that stack is the only way to know whether a line is on
+ * the paper at all.
  */
-function runsIn(content: string): string[] {
-  const runs: string[] = []
-  for (const block of content.match(/\[[^\]]*\]\s*TJ/g) ?? []) {
-    const hex = (block.match(/<[0-9a-fA-F]+>/g) ?? []).map((h) => h.slice(1, -1)).join('')
-    let out = ''
-    for (let i = 0; i < hex.length; i += 2) {
-      out += String.fromCharCode(Number.parseInt(hex.slice(i, i + 2), 16))
+function runsIn(content: string): TextRun[] {
+  const runs: TextRun[] = []
+
+  // Vertical offset and vertical direction of the current transform.
+  let ctm = { ty: 0, sy: 1 }
+  const stack: { ty: number; sy: number }[] = []
+  let textOffset = 0
+
+  for (const match of content.matchAll(TOKEN)) {
+    if (match[0] === 'q') {
+      stack.push({ ...ctm })
+      continue
     }
-    if (out.trim()) runs.push(out)
+    if (match[0] === 'Q') {
+      ctm = stack.pop() ?? ctm
+      continue
+    }
+
+    if (match[7] === 'cm') {
+      const d = Number(match[4])
+      const f = Number(match[6])
+      ctm = { ty: ctm.ty + f * ctm.sy, sy: ctm.sy * d }
+      continue
+    }
+    if (match[7] === 'Tm') {
+      textOffset = Number(match[6])
+      continue
+    }
+
+    const block = match[8]
+    if (!block) continue
+    const text = decodeHex(block)
+    if (text.trim()) runs.push({ text, y: ctm.ty + textOffset * ctm.sy })
   }
+
   return runs
+}
+
+/** A4 unless the document says otherwise. */
+const DEFAULT_PAGE_HEIGHT = 841.89
+
+function pageHeightOf(latin: string): number {
+  const box = /\/MediaBox\s*\[\s*[\d.-]+\s+[\d.-]+\s+[\d.-]+\s+([\d.]+)/.exec(latin)
+  return box?.[1] ? Number(box[1]) : DEFAULT_PAGE_HEIGHT
 }
 
 /**
@@ -95,9 +170,11 @@ function streamBodies(buffer: Uint8Array, latin: string): Uint8Array[] {
 
 export async function readPdf(buffer: Uint8Array): Promise<PdfContents> {
   const latin = latin1.decode(buffer)
+  const pageHeight = pageHeightOf(latin)
 
   // One content stream per page, in order.
   const pages: string[][] = []
+  const offPage: string[] = []
   for (const body of streamBodies(buffer, latin)) {
     // 0x78 is the zlib header; anything else here is the embedded JPEG.
     if (body[0] !== 0x78) continue
@@ -115,7 +192,11 @@ export async function readPdf(buffer: Uint8Array): Promise<PdfContents> {
     }
 
     if (!content.includes('TJ')) continue
-    pages.push(runsIn(content))
+
+    const runs = runsIn(content)
+    pages.push(runs.map((run) => run.text))
+    // A baseline below zero, or above the top edge, is off the sheet entirely.
+    offPage.push(...runs.filter((run) => run.y < 0 || run.y > pageHeight).map((run) => run.text))
   }
 
   const lines = pages.flat()
@@ -128,6 +209,7 @@ export async function readPdf(buffer: Uint8Array): Promise<PdfContents> {
     pages,
     lines,
     text: lines.join(' '),
+    offPage,
     hasImage: latin.includes('DCTDecode'),
     fonts: [...new Set(fonts)],
   }

@@ -21,6 +21,12 @@ const styles = StyleSheet.create({
     color: PAGE.ink,
     flexDirection: 'row',
   },
+  /**
+   * The grey band covers the whole sheet on every page, including a second one:
+   * the sidebar is a flex child of the page, so it stretches to the page height
+   * rather than to the height of the contact block inside it. Verified on the
+   * rendered file -- `0 0 165 841.89 re` on each page -- not assumed.
+   */
   sidebar: {
     width: SIDEBAR,
     backgroundColor: '#f2f5f8',
@@ -81,11 +87,18 @@ interface Props {
   resume: Resume
 }
 
+/**
+ * A section may be split across pages; a single entry may not. See the same
+ * note in the Harvard template: `wrap={false}` here meant a section longer than
+ * one page was drawn past the bottom margin and the overflow was lost.
+ */
 function MainSection({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <View style={styles.section} wrap={false}>
-      <Text style={styles.sectionTitle}>{title}</Text>
-      <View style={styles.sectionRule} />
+    <View style={styles.section}>
+      <View minPresenceAhead={36}>
+        <Text style={styles.sectionTitle}>{title}</Text>
+        <View style={styles.sectionRule} />
+      </View>
       {children}
     </View>
   )

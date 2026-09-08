@@ -61,6 +61,48 @@ export const administrativeAr: Resume = {
   languages: [{ id: 'lang-1', name: 'Español', level: 'Nativo' }],
 }
 
+/**
+ * A resume that does not fit on one page.
+ *
+ * The case the templates used to lose: with the section marked `wrap={false}`
+ * everything past the first page's bottom margin was simply not drawn, and
+ * nothing in the suite rendered a document long enough to notice.
+ */
+export const longAr: Resume = {
+  personal: {
+    fullName: 'Ana Gómez Ruiz',
+    headline: 'Analista administrativa contable',
+    email: 'ana.gomez.ruiz@example.com',
+    phone: '221 555-0100',
+    city: 'La Plata',
+    province: 'Buenos Aires',
+  },
+  summary: 'Analista administrativa con quince años en distribución mayorista y retail.',
+  experience: Array.from({ length: 8 }, (_, job) => ({
+    id: `exp-${job + 1}`,
+    role: `Analista administrativa ${job + 1}`,
+    company: `Distribuidora ${job + 1}`,
+    startDate: `${2008 + job}-03`,
+    endDate: `${2009 + job}-11`,
+    bullets: Array.from(
+      { length: 4 },
+      (_, bullet) =>
+        `Gestioné ${bullet + 1}0 cuentas corrientes del puesto ${job + 1} con cierre mensual sin diferencias.`,
+    ),
+  })),
+  education: [
+    {
+      id: 'edu-1',
+      title: 'Tecnicatura en Administración de Empresas',
+      institution: 'Universidad Nacional de La Plata',
+      endDate: '2019-12',
+      inProgress: false,
+    },
+  ],
+  skills: ['Excel avanzado', 'Tango Gestión', 'Cuentas corrientes'],
+  languages: [{ id: 'lang-1', name: 'Español', level: 'Nativo' }],
+}
+
 /** A resume that should come out clean: no errors, few suggestions. */
 export const cleanAr: Resume = {
   personal: {

@@ -79,11 +79,25 @@ interface Props {
   resume: Resume
 }
 
+/**
+ * A section MAY be split across pages; a single entry may not.
+ *
+ * It used to carry `wrap={false}`, which reads as "keep this together" and in
+ * practice means "this block cannot be split at all". An experience section
+ * longer than one page then had nowhere to go: react-pdf pushed it whole onto a
+ * fresh page and everything past the bottom margin was simply not drawn. On a
+ * two-page resume -- which Argentina allows -- that silently loses jobs.
+ *
+ * `minPresenceAhead` is what actually solves the thing `wrap={false}` was
+ * reaching for: a heading with nothing under it moves to the next page instead
+ * of being stranded at the bottom.
+ */
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
-  // `wrap={false}` keeps a section from being split across pages.
   return (
-    <View style={styles.section} wrap={false}>
-      <Text style={styles.sectionTitle}>{title}</Text>
+    <View style={styles.section}>
+      <Text style={styles.sectionTitle} minPresenceAhead={36}>
+        {title}
+      </Text>
       {children}
     </View>
   )
