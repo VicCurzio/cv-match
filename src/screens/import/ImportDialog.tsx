@@ -1,12 +1,14 @@
 import { FileUp, Loader2, X } from 'lucide-react'
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { extractText } from '@/domain/ingest/extractText'
 import { mapToResume, type ImportDraft } from '@/domain/ingest/mapToResume'
+import { parseEducation } from '@/domain/ingest/parseEducation'
 import { parseExperience } from '@/domain/ingest/parseExperience'
 import type { Resume } from '@/domain/resume/resumeSchema'
 import { newId } from '@/domain/resume/useResume'
 import { Button } from '@/shared/ui/Button'
 import { Notice } from '@/shared/ui/Card'
+import { Dialog } from '@/shared/ui/Dialog'
 import { copy } from '@/shared/config/copy'
 
 /**
@@ -54,6 +56,7 @@ export function ImportDialog({ current, onApply, onClose }: Props) {
 
   function apply(draft: ImportDraft) {
     const experience = picks.experience ? parseExperience(draft.experienceText) : []
+    const education = picks.education ? parseEducation(draft.educationText) : []
 
     onApply({
       ...current,
@@ -72,15 +75,8 @@ export function ImportDialog({ current, onApply, onClose }: Props) {
           ? experience.map((item) => ({ ...item, id: newId('exp') }))
           : current.experience,
       education:
-        picks.education && draft.educationText
-          ? [
-              {
-                id: newId('edu'),
-                title: draft.educationText.split('\n')[0] ?? '',
-                institution: draft.educationText.split('\n').slice(1).join(' '),
-                inProgress: false,
-              },
-            ]
+        education.length > 0
+          ? education.map((item) => ({ ...item, id: newId('edu') }))
           : current.education,
       skills: picks.skills && draft.skills.length > 0 ? draft.skills : current.skills,
     })
@@ -88,69 +84,63 @@ export function ImportDialog({ current, onApply, onClose }: Props) {
   }
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/50 p-6"
-      role="dialog"
-      aria-modal="true"
-      aria-label={copy.import.title}
-    >
-      <div className="w-full max-w-2xl rounded-card border border-border bg-card">
-        <div className="flex items-start justify-between gap-4 border-b border-border p-5">
-          <div>
-            <h2 className="text-base font-semibold">{copy.import.title}</h2>
-            <p className="mt-0.5 text-xs text-muted-foreground">{copy.import.subtitle}</p>
-          </div>
-          <Button variant="ghost" size="icon" aria-label="Cerrar" onClick={onClose}>
-            <X />
-          </Button>
+    <Dialog label={copy.import.title} onClose={onClose} className="max-w-2xl">
+      <div className="flex items-start justify-between gap-4 border-b border-border p-5">
+        <div>
+          <h2 className="text-base font-semibold">{copy.import.title}</h2>
+          <p className="mt-0.5 text-xs text-muted-foreground">{copy.import.subtitle}</p>
         </div>
-
-        <div className="p-5">
-          {stage.name === 'choose' ? (
-            <label className="flex cursor-pointer flex-col items-center gap-3 rounded-card border border-dashed border-border p-10 text-center hover:bg-muted">
-              <FileUp className="size-6 text-muted-foreground" />
-              <span className="text-sm font-medium">{copy.import.pick}</span>
-              <span className="text-xs text-muted-foreground">{copy.import.formats}</span>
-              <input
-                type="file"
-                accept=".pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-                className="hidden"
-                onChange={(e) => void handleFile(e.target.files?.[0])}
-              />
-            </label>
-          ) : null}
-
-          {stage.name === 'reading' ? (
-            <p className="flex items-center justify-center gap-2 p-10 text-sm text-muted-foreground">
-              <Loader2 className="size-4 animate-spin" />
-              {copy.import.reading}
-            </p>
-          ) : null}
-
-          {stage.name === 'failed' ? (
-            <div className="flex flex-col gap-4">
-              <Notice tone="warning">{stage.message}</Notice>
-              <div className="flex gap-2">
-                <Button onClick={() => setStage({ name: 'choose' })}>{copy.import.tryAnother}</Button>
-                <Button variant="ghost" onClick={onClose}>
-                  {copy.import.byHand}
-                </Button>
-              </div>
-            </div>
-          ) : null}
-
-          {stage.name === 'review' ? (
-            <Review
-              draft={stage.draft}
-              picks={picks}
-              onToggle={(key) => setPicks((p) => ({ ...p, [key]: !p[key] }))}
-              onApply={() => apply(stage.draft)}
-              onCancel={() => setStage({ name: 'choose' })}
-            />
-          ) : null}
-        </div>
+        <Button variant="ghost" size="icon" aria-label="Cerrar" onClick={onClose}>
+          <X />
+        </Button>
       </div>
-    </div>
+
+      <div className="p-5">
+        {stage.name === 'choose' ? (
+          <label className="flex cursor-pointer flex-col items-center gap-3 rounded-card border border-dashed border-border p-10 text-center hover:bg-muted focus-within:border-primary focus-within:ring-2 focus-within:ring-primary focus-within:ring-offset-2 focus-within:ring-offset-background">
+            <FileUp className="size-6 text-muted-foreground" />
+            <span className="text-sm font-medium">{copy.import.pick}</span>
+            <span className="text-xs text-muted-foreground">{copy.import.formats}</span>
+            {/* `sr-only`, not `hidden`: a display:none input cannot be tabbed to. */}
+            <input
+              type="file"
+              accept=".pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+              className="sr-only"
+              onChange={(e) => void handleFile(e.target.files?.[0])}
+            />
+          </label>
+        ) : null}
+
+        {stage.name === 'reading' ? (
+          <p className="flex items-center justify-center gap-2 p-10 text-sm text-muted-foreground">
+            <Loader2 className="size-4 animate-spin" />
+            {copy.import.reading}
+          </p>
+        ) : null}
+
+        {stage.name === 'failed' ? (
+          <div className="flex flex-col gap-4">
+            <Notice tone="warning" live>{stage.message}</Notice>
+            <div className="flex gap-2">
+              <Button onClick={() => setStage({ name: 'choose' })}>{copy.import.tryAnother}</Button>
+              <Button variant="ghost" onClick={onClose}>
+                {copy.import.byHand}
+              </Button>
+            </div>
+          </div>
+        ) : null}
+
+        {stage.name === 'review' ? (
+          <Review
+            draft={stage.draft}
+            picks={picks}
+            onToggle={(key) => setPicks((p) => ({ ...p, [key]: !p[key] }))}
+            onApply={() => apply(stage.draft)}
+            onCancel={() => setStage({ name: 'choose' })}
+          />
+        ) : null}
+      </div>
+    </Dialog>
   )
 }
 
@@ -198,7 +188,8 @@ function Review({
   onApply: () => void
   onCancel: () => void
 }) {
-  const experience = parseExperience(draft.experienceText)
+  const experience = useMemo(() => parseExperience(draft.experienceText), [draft.experienceText])
+  const education = useMemo(() => parseEducation(draft.educationText), [draft.educationText])
 
   return (
     <div className="flex flex-col gap-4">
@@ -230,8 +221,8 @@ function Review({
           onToggle={() => onToggle('experience')}
         />
         <Row
-          label="Educación"
-          value={draft.educationText.split('\n').join(' · ')}
+          label={`Educación (${education.length} ${education.length === 1 ? 'estudio' : 'estudios'})`}
+          value={education.map((e) => [e.title, e.institution].filter(Boolean).join(' · ')).join(' | ')}
           checked={picks.education}
           onToggle={() => onToggle('education')}
         />
