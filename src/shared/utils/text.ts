@@ -10,6 +10,12 @@ export function hasNumber(text: string): boolean {
   return /\d/.test(text)
 }
 
+/** "a, b y c" -- the Spanish list, without the serial comma. */
+export function listOf(items: string[]): string {
+  if (items.length <= 1) return items[0] ?? ''
+  return `${items.slice(0, -1).join(', ')} y ${items.at(-1)}`
+}
+
 export function stripAccents(text: string): string {
   return text.normalize('NFD').replace(/[̀-ͯ]/gu, '')
 }

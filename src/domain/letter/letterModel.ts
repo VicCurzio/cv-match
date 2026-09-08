@@ -1,5 +1,6 @@
 import { z } from 'zod'
 import type { Resume } from '@/domain/resume/resumeSchema'
+import { listOf } from '@/shared/utils/text'
 
 /**
  * The cover letter, without a language model (ADR 0003).
@@ -66,12 +67,6 @@ export function draftLetter(
     body: BODY_PLACEHOLDER,
     closing,
   }
-}
-
-/** "a, b y c" -- the Spanish list, without the serial comma. */
-function listOf(items: string[]): string {
-  if (items.length <= 1) return items[0] ?? ''
-  return `${items.slice(0, -1).join(', ')} y ${items.at(-1)}`
 }
 
 export function isUnwritten(letter: Letter): boolean {

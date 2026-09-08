@@ -39,13 +39,22 @@ export function Section({
 
 export function Notice({
   tone = 'info',
+  live = false,
   children,
 }: {
   tone?: 'info' | 'warning'
+  /**
+   * For a notice that APPEARS in reaction to something -- a save that failed, a
+   * market that was just changed. Without it the text shows up on screen and a
+   * screen reader says nothing, so the only people who learn that the photo will
+   * not be exported are the ones who can see the box.
+   */
+  live?: boolean
   children: ReactNode
 }) {
   return (
     <p
+      role={live ? 'status' : undefined}
       className={cn(
         'rounded-lg border px-3 py-2 text-xs leading-relaxed',
         tone === 'warning'

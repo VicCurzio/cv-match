@@ -1,14 +1,6 @@
 import type { Finding, Rule } from '@/domain/analysis/findingModel'
-import { RESTRICTABLE_FIELDS, type RestrictableField } from '@/domain/resume/resumeSchema'
+import { FIELD_LABEL, RESTRICTABLE_FIELDS } from '@/domain/resume/resumeSchema'
 import { countWords } from '@/shared/utils/text'
-
-const FIELD_LABEL: Record<RestrictableField, string> = {
-  photo: 'la foto',
-  documentId: 'el número de documento',
-  birthDate: 'la fecha de nacimiento',
-  maritalStatus: 'el estado civil',
-  nationality: 'la nacionalidad',
-}
 
 /**
  * The rules that make the product worth using: the same resume gets a different

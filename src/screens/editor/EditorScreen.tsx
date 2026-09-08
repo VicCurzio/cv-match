@@ -2,7 +2,8 @@ import { Download, FileJson, FileUp, Mail, Upload } from 'lucide-react'
 import { useMemo, useRef, useState } from 'react'
 import { runAnalysis } from '@/domain/analysis/runAnalysis'
 import { downloadBlob, downloadJson } from '@/domain/export/download'
-import { MARKET_PROFILES, type MarketId } from '@/domain/market/marketProfile'
+import { MARKET_PROFILES, forbiddenFields, type MarketId } from '@/domain/market/marketProfile'
+import { FIELD_LABEL } from '@/domain/resume/resumeSchema'
 import { parseResumeJson } from '@/domain/resume/storage'
 import type { ResumeState } from '@/domain/resume/useResume'
 import { ImportDialog } from '@/screens/import/ImportDialog'
@@ -11,12 +12,14 @@ import { ReviewPanel } from '@/screens/review/ReviewPanel'
 import { Button } from '@/shared/ui/Button'
 import { Notice } from '@/shared/ui/Card'
 import { copy } from '@/shared/config/copy'
+import { listOf } from '@/shared/utils/text'
 import { resumeFileName } from '@/templates/buildPdf'
 import { ResumeForm } from './ResumeForm'
 import { usePdfPreview } from './usePdfPreview'
 
 export function EditorScreen({ state }: { state: ResumeState }) {
   const { resume, settings, setResume, setSettings, replaceAll, saveError } = state
+  const { unreadable, dismissUnreadable } = state
   const [message, setMessage] = useState<string | null>(null)
   const [importing, setImporting] = useState(false)
   const [writingLetter, setWritingLetter] = useState(false)
@@ -59,15 +62,21 @@ export function EditorScreen({ state }: { state: ResumeState }) {
     setSettings({ atsMode: next })
   }
 
+  /**
+   * The notice names the fields the new market drops, read from the profile.
+   *
+   * It used to check a hand-written list of three fields, so the two it did not
+   * mention -- marital status and nationality -- disappeared from the export
+   * without a word. A list written twice is a list that stops matching.
+   */
   function changeMarket(market: MarketId) {
     setSettings({ market })
-    const stripped = MARKET_PROFILES[market]
-    const removed = (['photo', 'documentId', 'birthDate'] as const).filter(
-      (field) => stripped.fields[field] === 'forbidden' && resume.personal[field],
-    )
+    const next = MARKET_PROFILES[market]
+    const removed = forbiddenFields(next).filter((field) => resume.personal[field])
+
     setMessage(
       removed.length > 0
-        ? `En ${stripped.label} el CV va sin ${removed.length === 1 ? 'ese dato' : 'esos datos'}. Queda guardado, simplemente no se exporta.`
+        ? `En ${next.label} el CV va sin ${listOf(removed.map((field) => FIELD_LABEL[field]))}. Queda guardado, simplemente no se exporta.`
         : null,
     )
   }
@@ -131,8 +140,36 @@ export function EditorScreen({ state }: { state: ResumeState }) {
         </div>
       </header>
 
-      {saveError ? <Notice tone="warning">{saveError}</Notice> : null}
-      {message ? <Notice>{message}</Notice> : null}
+      {/*
+        A saved document that could not be read is offered back before the
+        autosave writes over it. It is the one failure in this app that destroys
+        work, and it used to happen without a word on screen.
+      */}
+      {unreadable ? (
+        <Notice tone="warning" live>
+          {copy.recovery.unreadable}
+          <span className="mt-2 flex flex-wrap gap-2">
+            <Button
+              size="sm"
+              onClick={() => {
+                downloadBlob(
+                  new Blob([unreadable], { type: 'application/json' }),
+                  copy.recovery.fileName,
+                )
+                dismissUnreadable()
+              }}
+            >
+              {copy.recovery.download}
+            </Button>
+            <Button size="sm" variant="ghost" onClick={dismissUnreadable}>
+              {copy.recovery.dismiss}
+            </Button>
+          </span>
+        </Notice>
+      ) : null}
+
+      {saveError ? <Notice tone="warning" live>{saveError}</Notice> : null}
+      {message ? <Notice live>{message}</Notice> : null}
 
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(420px,42%)]">
         <div className="flex flex-col gap-4">

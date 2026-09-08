@@ -37,8 +37,27 @@ export interface PreviewState {
  * rather than set from inside the effect, so a render never schedules another
  * render just to flip a flag.
  */
+/**
+ * Everything that changes the rendered file, as one comparable string.
+ *
+ * The photo is left out of the serialisation and represented by its length plus
+ * its tail. It is a base64 data URL of around 30 KB, and it used to be copied
+ * character by character on every render of the editor -- which is once per
+ * keystroke -- to produce a value that only ever gets compared.
+ */
+function previewKey(resume: Resume, options: BuildOptions): string {
+  const { photo, ...personal } = resume.personal
+  return JSON.stringify([
+    { ...resume, personal },
+    photo ? `${photo.length}:${photo.slice(-24)}` : 'no-photo',
+    options.profile.id,
+    options.atsMode,
+    options.template,
+  ])
+}
+
 export function usePdfPreview(resume: Resume, options: BuildOptions): PreviewState {
-  const key = JSON.stringify([resume, options.profile.id, options.atsMode, options.template])
+  const key = previewKey(resume, options)
 
   const [rendered, setRendered] = useState<Rendered | null>(null)
   const [error, setError] = useState<string | null>(null)

@@ -42,6 +42,19 @@ export const copy = {
     addLanguage: 'Agregar idioma',
     remove: 'Quitar',
     currentJob: 'Trabajo acá actualmente',
+    personalData: 'Datos personales (opcionales)',
+    personalDataHint:
+      'Ninguno hace falta para postularse. Cargalos solo si el aviso los pide; el panel de la derecha te dice qué conviene en cada mercado.',
+    personalDataNotExported:
+      'En este mercado estos datos no se exportan. Los dejamos acá para que puedas borrarlos si querés.',
+  },
+
+  recovery: {
+    unreadable:
+      'Había un CV guardado en este navegador y no lo pudimos leer, así que la app arrancó en blanco. Bajate el archivo antes de seguir editando: es la única copia que queda.',
+    download: 'Bajar el archivo',
+    dismiss: 'Descartarlo',
+    fileName: 'cv-match-ilegible.json',
   },
 
   review: {
