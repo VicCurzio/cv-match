@@ -4,6 +4,7 @@ import type { MarketProfile } from '@/domain/market/marketProfile'
 import { PhotoDialog } from './PhotoDialog'
 import {
   RESTRICTABLE_FIELDS,
+  type CourseItem,
   type EducationItem,
   type ExperienceItem,
   type LanguageItem,
@@ -70,6 +71,12 @@ export function ResumeForm({ resume, profile, atsMode, onChange, onPhotoError }:
       education: current.education.map((item, i) => (i === index ? { ...item, ...patch } : item)),
     }))
 
+  const patchCourse = (index: number, patch: Partial<CourseItem>) =>
+    onChange((current) => ({
+      ...current,
+      courses: current.courses.map((item, i) => (i === index ? { ...item, ...patch } : item)),
+    }))
+
   const patchLanguage = (index: number, patch: Partial<LanguageItem>) =>
     onChange((current) => ({
       ...current,
@@ -86,6 +93,12 @@ export function ResumeForm({ resume, profile, atsMode, onChange, onPhotoError }:
     onChange((current) => ({
       ...current,
       education: current.education.filter((_, i) => i !== index),
+    }))
+
+  const removeCourse = (index: number) =>
+    onChange((current) => ({
+      ...current,
+      courses: current.courses.filter((_, i) => i !== index),
     }))
 
   const removeLanguage = (index: number) =>
@@ -384,6 +397,69 @@ export function ResumeForm({ resume, profile, atsMode, onChange, onPhotoError }:
             </SelectField>
             <div className="sm:col-span-2">
               <Button variant="ghost" size="sm" onClick={() => removeEducation(index)}>
+                <Trash2 />
+                {copy.editor.remove}
+              </Button>
+            </div>
+          </div>
+        ))}
+      </Section>
+
+      <Section
+        title={copy.editor.courses}
+        description={copy.editor.coursesHint}
+        action={
+          <Button
+            size="sm"
+            onClick={() =>
+              onChange((current) => ({
+                ...current,
+                courses: [
+                  ...current.courses,
+                  { id: newId('course'), title: '', institution: '', inProgress: false },
+                ],
+              }))
+            }
+          >
+            <Plus />
+            {copy.editor.addCourse}
+          </Button>
+        }
+      >
+        {resume.courses.map((item, index) => (
+          <div key={item.id} className="grid gap-3 rounded-lg border border-border p-4 sm:grid-cols-2">
+            <TextField
+              label="Curso o certificación"
+              value={item.title}
+              onChange={(e) => patchCourse(index, { title: e.target.value })}
+            />
+            <TextField
+              label="Dónde lo hiciste"
+              value={item.institution}
+              onChange={(e) => patchCourse(index, { institution: e.target.value })}
+            />
+            <TextField
+              label="Terminó (AAAA-MM)"
+              placeholder="2024-12"
+              value={item.endDate ?? ''}
+              onChange={(e) => patchCourse(index, { endDate: e.target.value || undefined })}
+            />
+            <TextField
+              label="Detalle (opcional)"
+              hint="Horas, o número de certificado."
+              value={item.detail ?? ''}
+              onChange={(e) => patchCourse(index, { detail: e.target.value || undefined })}
+            />
+            <SelectField
+              label="Estado"
+              value={item.inProgress ? 'yes' : 'no'}
+              onChange={(e) => patchCourse(index, { inProgress: e.target.value === 'yes' })}
+            >
+              <option value="no">Terminado</option>
+              <option value="yes">En curso</option>
+            </SelectField>
+            <div className="sm:col-span-2">
+              <Button variant="ghost" size="sm" onClick={() => removeCourse(index)}>
                 <Trash2 />
                 {copy.editor.remove}
               </Button>

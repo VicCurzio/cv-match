@@ -36,6 +36,26 @@ export const educationItemSchema = z.object({
   inProgress: z.boolean().default(false),
 })
 
+/**
+ * Courses and certifications, kept apart from formal education.
+ *
+ * Mixing them is the default mistake and it costs both sections: a secondary
+ * school diploma listed next to a two-day sales workshop makes the schooling
+ * look padded and buries the training that is actually recent and relevant.
+ * Separated, "Educación" stays short and credible and "Cursos" shows someone
+ * who keeps studying -- which for an administrative or commercial profile is
+ * often the part that differentiates two identical resumes.
+ */
+export const courseItemSchema = z.object({
+  id: z.string(),
+  title: z.string(),
+  institution: z.string(),
+  endDate: yearMonth.optional(),
+  inProgress: z.boolean().default(false),
+  /** Hours, or a credential number. Shown only when it is there. */
+  detail: z.string().optional(),
+})
+
 export const languageItemSchema = z.object({
   id: z.string(),
   name: z.string(),
@@ -81,6 +101,12 @@ export const resumeSchema = z.object({
   summary: z.string(),
   experience: z.array(experienceItemSchema),
   education: z.array(educationItemSchema),
+  /**
+   * Optional with a default, on purpose: every resume already saved in someone's
+   * browser was written before this section existed, and a required field would
+   * make all of them fail validation and vanish on the next load.
+   */
+  courses: z.array(courseItemSchema).default([]),
   skills: z.array(z.string()),
   languages: z.array(languageItemSchema),
 })
@@ -89,6 +115,7 @@ export type Resume = z.infer<typeof resumeSchema>
 export type Personal = z.infer<typeof personalSchema>
 export type ExperienceItem = z.infer<typeof experienceItemSchema>
 export type EducationItem = z.infer<typeof educationItemSchema>
+export type CourseItem = z.infer<typeof courseItemSchema>
 export type LanguageItem = z.infer<typeof languageItemSchema>
 
 /** The personal fields a market profile can permit, discourage or forbid. */
@@ -128,6 +155,7 @@ export const emptyResume = (): Resume => ({
   summary: '',
   experience: [],
   education: [],
+  courses: [],
   skills: [],
   languages: [],
 })

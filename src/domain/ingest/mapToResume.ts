@@ -19,6 +19,7 @@ export interface ImportDraft {
   summary: string
   experienceText: string
   educationText: string
+  coursesText: string
   skills: string[]
   languagesText: string
   /** Lines that matched no section. Shown so the person can place them. */
@@ -30,6 +31,9 @@ const HEADINGS: { key: keyof typeof BUCKETS; words: string[] }[] = [
   { key: 'summary', words: ['perfil', 'perfil profesional', 'resumen', 'acerca de', 'sobre mi', 'objetivo', 'summary', 'profile', 'about'] },
   { key: 'experience', words: ['experiencia', 'experiencia laboral', 'experiencia profesional', 'trayectoria', 'antecedentes laborales', 'experience', 'work experience', 'employment'] },
   { key: 'education', words: ['educacion', 'formacion', 'formacion academica', 'estudios', 'education', 'academic background'] },
+  // 'cursos' has to be matched BEFORE 'educacion' is tried on a heading like
+  // 'cursos y certificaciones', or the two sections merge back into one.
+  { key: 'courses', words: ['cursos', 'cursos y certificaciones', 'certificaciones', 'capacitaciones', 'capacitacion', 'courses', 'certifications', 'training'] },
   { key: 'skills', words: ['habilidades', 'aptitudes', 'competencias', 'conocimientos', 'skills', 'technical skills'] },
   { key: 'languages', words: ['idiomas', 'languages'] },
 ]
@@ -38,6 +42,7 @@ const BUCKETS = {
   summary: [] as string[],
   experience: [] as string[],
   education: [] as string[],
+  courses: [] as string[],
   skills: [] as string[],
   languages: [] as string[],
   header: [] as string[],
@@ -139,6 +144,7 @@ export function mapToResume(lines: string[]): ImportDraft {
     summary: [],
     experience: [],
     education: [],
+    courses: [],
     skills: [],
     languages: [],
     header: [],
@@ -193,6 +199,7 @@ export function mapToResume(lines: string[]): ImportDraft {
     summary: buckets.summary.join(' ').trim(),
     experienceText: buckets.experience.join('\n'),
     educationText: buckets.education.join('\n'),
+    coursesText: buckets.courses.join('\n'),
     skills: splitSkills(buckets.skills),
     languagesText: buckets.languages.join('\n'),
     leftovers: header.filter((line) => !used.has(line) && line.length > 2),

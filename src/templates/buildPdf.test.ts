@@ -89,6 +89,57 @@ describe('no word is ever hyphenated across lines', () => {
  * that produced it. This is what makes "the photo is not exported" a fact about
  * the file instead of a promise about the code.
  */
+describe('courses reach the file as their own section', () => {
+  const withCourse = {
+    ...withPhoto,
+    courses: [
+      {
+        id: 'c1',
+        title: 'Gestión de cobranzas y recupero',
+        institution: 'Cámara de Comercio',
+        endDate: '2024-06',
+        inProgress: false,
+        detail: '40 horas',
+      },
+    ],
+  }
+
+  for (const template of ['harvard', 'modern'] as const) {
+    it(`prints the heading, the course and its detail in ${template}`, async () => {
+      const blob = await buildPdf(withCourse, {
+        profile: AR_PROFILE,
+        atsMode: false,
+        template,
+      })
+      const pdf = await readPdf(new Uint8Array(await blob.arrayBuffer()))
+
+      expect(pdf.lines).toContain('CURSOS Y CERTIFICACIONES')
+      expect(pdf.text).toContain('Gestión de cobranzas y recupero')
+      expect(pdf.text).toContain('40 horas')
+    })
+  }
+
+  it('leaves the heading out when there are no courses', async () => {
+    const pdf = await render({ profile: AR_PROFILE, atsMode: false, template: 'harvard' })
+    expect(pdf.lines).not.toContain('CURSOS Y CERTIFICACIONES')
+  })
+
+  it('keeps formal education separate from it', async () => {
+    const blob = await buildPdf(withCourse, {
+      profile: AR_PROFILE,
+      atsMode: true,
+      template: 'harvard',
+    })
+    const pdf = await readPdf(new Uint8Array(await blob.arrayBuffer()))
+
+    expect(pdf.lines).toContain('EDUCACIÓN')
+    expect(pdf.lines).toContain('CURSOS Y CERTIFICACIONES')
+    expect(pdf.lines.indexOf('EDUCACIÓN')).toBeLessThan(
+      pdf.lines.indexOf('CURSOS Y CERTIFICACIONES'),
+    )
+  })
+})
+
 describe('the market profile decides what reaches the file', () => {
   it('embeds the photo for Argentina', async () => {
     const pdf = await render({ profile: AR_PROFILE, atsMode: false, template: 'modern' })

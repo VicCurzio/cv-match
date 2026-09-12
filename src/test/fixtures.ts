@@ -57,6 +57,7 @@ export const administrativeAr: Resume = {
       inProgress: false,
     },
   ],
+  courses: [],
   skills: ['Atención al cliente', 'Facturación'],
   languages: [{ id: 'lang-1', name: 'Español', level: 'Nativo' }],
 }
@@ -99,6 +100,7 @@ export const longAr: Resume = {
       inProgress: false,
     },
   ],
+  courses: [],
   skills: ['Excel avanzado', 'Tango Gestión', 'Cuentas corrientes'],
   languages: [{ id: 'lang-1', name: 'Español', level: 'Nativo' }],
 }
@@ -137,6 +139,16 @@ export const cleanAr: Resume = {
       institution: 'Universidad Nacional de La Plata',
       endDate: '2019-12',
       inProgress: false,
+    },
+  ],
+  courses: [
+    {
+      id: 'course-1',
+      title: 'Gestión de cobranzas y recupero',
+      institution: 'Cámara de Comercio',
+      endDate: '2024-06',
+      inProgress: false,
+      detail: '40 horas',
     },
   ],
   skills: ['Excel avanzado', 'Tango Gestión', 'Cuentas corrientes', 'Conciliaciones'],

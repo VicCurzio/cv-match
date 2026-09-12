@@ -170,6 +170,24 @@ export function HarvardResume({ resume }: Props) {
           </Section>
         ) : null}
 
+        {resume.courses.length > 0 ? (
+          <Section title="CURSOS Y CERTIFICACIONES">
+            {resume.courses.map((item) => (
+              <View key={item.id} style={styles.entry} wrap={false}>
+                <View style={styles.entryHead}>
+                  <Text style={styles.role}>{item.title}</Text>
+                  <Text style={styles.dates}>
+                    {item.inProgress ? 'en curso' : formatYearMonth(item.endDate)}
+                  </Text>
+                </View>
+                <Text style={styles.company}>
+                  {[item.institution, item.detail].filter(Boolean).join(' - ')}
+                </Text>
+              </View>
+            ))}
+          </Section>
+        ) : null}
+
         {skills.length > 0 ? (
           <Section title="HABILIDADES">
             <View style={styles.tagRow}>

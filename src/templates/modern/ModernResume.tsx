@@ -194,6 +194,22 @@ export function ModernResume({ resume }: Props) {
               ))}
             </MainSection>
           ) : null}
+
+          {resume.courses.length > 0 ? (
+            <MainSection title="CURSOS Y CERTIFICACIONES">
+              {resume.courses.map((item) => (
+                <View key={item.id} style={styles.entry} wrap={false}>
+                  <Text style={styles.role}>{item.title}</Text>
+                  <Text style={styles.company}>
+                    {[item.institution, item.detail].filter(Boolean).join(' - ')}
+                  </Text>
+                  <Text style={styles.dates}>
+                    {item.inProgress ? 'en curso' : formatYearMonth(item.endDate)}
+                  </Text>
+                </View>
+              ))}
+            </MainSection>
+          ) : null}
         </View>
       </Page>
     </Document>

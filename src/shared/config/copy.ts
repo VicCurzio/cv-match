@@ -30,6 +30,9 @@ export const copy = {
     summaryHint: 'Tres o cuatro líneas: qué hacés, cuánta experiencia tenés y qué buscás.',
     experience: 'Experiencia laboral',
     education: 'Educación',
+    courses: 'Cursos y certificaciones',
+    coursesHint:
+      'Va aparte de Educación a propósito: mezclarlos hace ver el secundario como relleno y entierra la capacitación reciente, que suele ser lo que te diferencia.',
     skills: 'Habilidades',
     languages: 'Idiomas',
     preview: 'Vista previa',
@@ -39,6 +42,7 @@ export const copy = {
     building: 'Armando el PDF...',
     addExperience: 'Agregar puesto',
     addEducation: 'Agregar formación',
+    addCourse: 'Agregar curso',
     addLanguage: 'Agregar idioma',
     remove: 'Quitar',
     currentJob: 'Trabajo acá actualmente',
