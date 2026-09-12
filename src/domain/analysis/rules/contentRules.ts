@@ -1,5 +1,18 @@
 import type { Finding, Rule } from '@/domain/analysis/findingModel'
+import type { ExperienceItem } from '@/domain/resume/resumeSchema'
 import { countWords, startsWithActionVerb, hasNumber } from '@/shared/utils/text'
+
+/**
+ * How a finding names one job.
+ *
+ * The company is part of the name, not decoration. Someone with two spells as
+ * "Asesora Comercial" got two findings that read identically, and neither said
+ * which job to go fix -- the panel points at a resume entry, so it has to name
+ * the entry the way the resume does.
+ */
+function label(item: ExperienceItem): string {
+  return item.company.trim() ? `${item.role} en ${item.company}` : item.role
+}
 
 const SUMMARY_MAX_WORDS = 60
 const BULLET_MAX_WORDS = 30
@@ -81,7 +94,7 @@ export const bulletsStartWithVerb: Rule = (resume) => {
       severity: 'warning',
       section: 'experience',
       itemId: item.id,
-      problem: `En "${item.role}" hay ${weak.length} ${weak.length === 1 ? 'punto que no arranca' : 'puntos que no arrancan'} con un verbo de acción.`,
+      problem: `En "${label(item)}" hay ${weak.length} ${weak.length === 1 ? 'punto que no arranca' : 'puntos que no arrancan'} con un verbo de acción.`,
       action:
         'Empezá por lo que hiciste: "Coordiné...", "Reduje...", "Implementé...", en vez de "Encargada de...".',
     })
@@ -102,7 +115,7 @@ export const experienceHasNumbers: Rule = (resume) => {
         severity: 'warning',
         section: 'experience',
         itemId: item.id,
-        problem: `"${item.role}" no tiene ningún detalle de lo que hiciste.`,
+        problem: `"${label(item)}" no tiene ningún detalle de lo que hiciste.`,
         action: 'Agregá dos o tres puntos con tus tareas y logros concretos.',
       })
       continue
@@ -113,7 +126,7 @@ export const experienceHasNumbers: Rule = (resume) => {
         severity: 'warning',
         section: 'experience',
         itemId: item.id,
-        problem: `"${item.role}" no tiene ni un número.`,
+        problem: `"${label(item)}" no tiene ni un número.`,
         action:
           'Agregá cuántos (clientes, expedientes, pedidos), cuánto tiempo o cuánto mejoraste algo. Un número vale más que un adjetivo.',
       })
@@ -132,7 +145,7 @@ export const bulletLength: Rule = (resume) => {
       severity: 'suggestion',
       section: 'experience',
       itemId: item.id,
-      problem: `En "${item.role}" hay ${long.length} ${long.length === 1 ? 'punto' : 'puntos'} de más de ${BULLET_MAX_WORDS} palabras.`,
+      problem: `En "${label(item)}" hay ${long.length} ${long.length === 1 ? 'punto' : 'puntos'} de más de ${BULLET_MAX_WORDS} palabras.`,
       action: 'Partilo en dos. Un punto de CV entra en una o dos líneas.',
     })
   }
