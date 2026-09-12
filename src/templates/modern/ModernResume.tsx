@@ -15,30 +15,45 @@ import { PAGE, formatRange, formatYearMonth } from '@/templates/shared/format'
 const SIDEBAR = 165
 
 const styles = StyleSheet.create({
+  /**
+   * The vertical margin lives on the PAGE, not on the columns.
+   *
+   * It used to sit on each column's padding, and padding applies once to a
+   * block: when the content ran onto a second page the continuation started
+   * hard against the top edge of the sheet, with no margin at all. Page padding
+   * is the only kind react-pdf re-applies on every page.
+   */
   page: {
     fontFamily: 'Helvetica',
     fontSize: 10,
     lineHeight: 1.45,
     color: PAGE.ink,
     flexDirection: 'row',
-  },
-  /**
-   * The grey band covers the whole sheet on every page, including a second one:
-   * the sidebar is a flex child of the page, so it stretches to the page height
-   * rather than to the height of the contact block inside it. Verified on the
-   * rendered file -- `0 0 165 841.89 re` on each page -- not assumed.
-   */
-  sidebar: {
-    width: SIDEBAR,
-    backgroundColor: '#f2f5f8',
     paddingTop: PAGE.margin,
     paddingBottom: PAGE.margin,
+  },
+  /**
+   * The grey band, drawn behind everything and bleeding to all four edges.
+   *
+   * It cannot be the sidebar column itself any more: that column now sits
+   * inside the page padding, so its background would stop short of the top and
+   * bottom edges and read as a floating grey rectangle. Absolute plus `fixed`
+   * puts it outside the flow and repeats it on every page.
+   */
+  band: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    bottom: 0,
+    width: SIDEBAR,
+    backgroundColor: '#f2f5f8',
+  },
+  sidebar: {
+    width: SIDEBAR,
     paddingHorizontal: 22,
   },
   main: {
     flex: 1,
-    paddingTop: PAGE.margin,
-    paddingBottom: PAGE.margin,
     paddingHorizontal: 28,
   },
   photo: {
@@ -120,6 +135,9 @@ export function ModernResume({ resume }: Props) {
   return (
     <Document title={`${personal.fullName} - CV`} author={personal.fullName} language="es">
       <Page size="A4" style={styles.page}>
+        {/* Behind the columns, repeated on every page. */}
+        <View style={styles.band} fixed />
+
         <View style={styles.sidebar}>
           {personal.photo ? <Image style={styles.photo} src={personal.photo} /> : null}
 

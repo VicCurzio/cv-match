@@ -150,6 +150,7 @@ describe('layoutFacts', () => {
     const facts = layoutFacts({
       bytes: 0,
       pages: [],
+      topOfPage: [],
       lines: [],
       text: '',
       offPage: [],

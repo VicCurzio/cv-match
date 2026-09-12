@@ -41,9 +41,13 @@ const styles = StyleSheet.create({
   contact: {
     fontSize: 9,
     textAlign: 'center',
-    marginTop: 5,
+    // Tight to the headline: name, title and contact are one block, and the
+    // gap that matters is the one AFTER them, not the ones inside.
+    marginTop: 2,
     color: PAGE.inkSoft,
   },
+  /** Separates the whole header from the first section. */
+  header: { marginBottom: 7 },
   section: { marginTop: 11 },
   sectionTitle: {
     fontFamily: 'Times-Bold',
@@ -142,7 +146,7 @@ export function HarvardResume({ resume }: Props) {
       language="es"
     >
       <Page size="A4" style={styles.page}>
-        <View wrap={false}>
+        <View style={styles.header} wrap={false}>
           <Text style={styles.name}>{resume.personal.fullName || 'Tu nombre'}</Text>
           {resume.personal.headline ? (
             <Text style={styles.headline}>{resume.personal.headline}</Text>

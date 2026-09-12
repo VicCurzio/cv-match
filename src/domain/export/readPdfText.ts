@@ -15,6 +15,14 @@ export interface PdfContents {
   bytes: number
   /** Text runs grouped by page, in draw order. */
   pages: string[][]
+  /**
+   * The highest baseline drawn on each page, in points from the bottom.
+   *
+   * It is how a missing top margin becomes checkable. A margin set on a column
+   * applies once to the block, so a continuation page starts hard against the
+   * top edge -- invisible to text extraction, obvious on paper.
+   */
+  topOfPage: number[]
   /** Every run, flattened. */
   lines: string[]
   text: string
@@ -174,6 +182,7 @@ export async function readPdf(buffer: Uint8Array): Promise<PdfContents> {
 
   // One content stream per page, in order.
   const pages: string[][] = []
+  const topOfPage: number[] = []
   const offPage: string[] = []
   for (const body of streamBodies(buffer, latin)) {
     // 0x78 is the zlib header; anything else here is the embedded JPEG.
@@ -195,6 +204,7 @@ export async function readPdf(buffer: Uint8Array): Promise<PdfContents> {
 
     const runs = runsIn(content)
     pages.push(runs.map((run) => run.text))
+    topOfPage.push(runs.length > 0 ? Math.max(...runs.map((run) => run.y)) : 0)
     // A baseline below zero, or above the top edge, is off the sheet entirely.
     offPage.push(...runs.filter((run) => run.y < 0 || run.y > pageHeight).map((run) => run.text))
   }
@@ -207,6 +217,7 @@ export async function readPdf(buffer: Uint8Array): Promise<PdfContents> {
   return {
     bytes: buffer.length,
     pages,
+    topOfPage,
     lines,
     text: lines.join(' '),
     offPage,

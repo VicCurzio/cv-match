@@ -201,6 +201,31 @@ describe('a long resume lays out correctly', () => {
     }
   }, 30_000)
 
+  /**
+   * A margin set on a column applies once to the block, so the continuation
+   * page started hard against the top edge of the sheet. Text extraction cannot
+   * see it -- the words are all there, in order -- which is why the check has to
+   * be about where they land, not about what they say.
+   */
+  it('leaves a top margin on every page, not just the first', async () => {
+    const A4 = 841.89
+    const MARGIN = 51 // 18 mm
+
+    for (const template of ['harvard', 'modern'] as const) {
+      const blob = await buildPdf(many, { profile: AR_PROFILE, atsMode: false, template })
+      const pdf = await readPdf(new Uint8Array(await blob.arrayBuffer()))
+
+      expect(pdf.pages.length, `${template} needs more than one page for this test`).toBeGreaterThan(1)
+
+      for (const [index, top] of pdf.topOfPage.entries()) {
+        expect(
+          top,
+          `${template} page ${index + 1} draws at ${top}, above the ${MARGIN}pt margin`,
+        ).toBeLessThanOrEqual(A4 - MARGIN)
+      }
+    }
+  }, 20_000)
+
   it('keeps a long title from running over the date beside it', async () => {
     const blob = await buildPdf(many, { profile: AR_PROFILE, atsMode: true, template: 'harvard' })
     const pdf = await readPdf(new Uint8Array(await blob.arrayBuffer()))
