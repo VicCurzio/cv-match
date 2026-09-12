@@ -46,11 +46,24 @@ export const educationItemSchema = z.object({
  * who keeps studying -- which for an administrative or commercial profile is
  * often the part that differentiates two identical resumes.
  */
+/**
+ * A course often has only a year attached to it.
+ *
+ * Nobody remembers the month of a three-hour training, and a resume does not
+ * need it. Demanding `AAAA-MM` here pushed people to invent a month or to leave
+ * the date out entirely, and a course with no date at all reads as older than
+ * it is. Jobs still require the month: for those the month is known and it is
+ * what the dates on a resume are read against.
+ */
+export const yearOrMonth = z
+  .string()
+  .regex(/^\d{4}(-(0[1-9]|1[0-2]))?$/, 'Usá el año (AAAA) o el año y el mes (AAAA-MM).')
+
 export const courseItemSchema = z.object({
   id: z.string(),
   title: z.string(),
   institution: z.string(),
-  endDate: yearMonth.optional(),
+  endDate: yearOrMonth.optional(),
   inProgress: z.boolean().default(false),
   /** Hours, or a credential number. Shown only when it is there. */
   detail: z.string().optional(),

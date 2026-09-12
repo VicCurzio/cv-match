@@ -31,6 +31,40 @@ describe('the courses section is its own thing', () => {
 })
 
 /**
+ * Nobody remembers the month of a three-hour training. Demanding `AAAA-MM`
+ * pushed people to invent a month or to leave the date off, and a course with
+ * no date reads as older than it is.
+ */
+describe('a course may carry only a year', () => {
+  const withYear = (endDate: string) => ({
+    ...cleanAr,
+    courses: [{ id: 'c1', title: 'Cooperativismo', institution: 'Credicoop', endDate, inProgress: false }],
+  })
+
+  it('accepts the year on its own', () => {
+    expect(resumeSchema.safeParse(withYear('2025')).success).toBe(true)
+  })
+
+  it('still accepts the year and the month', () => {
+    expect(resumeSchema.safeParse(withYear('2025-03')).success).toBe(true)
+  })
+
+  it('rejects anything else', () => {
+    for (const bad of ['25', '2025-13', '2025-3', 'marzo 2025', '2025/03']) {
+      expect(resumeSchema.safeParse(withYear(bad)).success, bad).toBe(false)
+    }
+  })
+
+  it('keeps the month required on a job, where it is known and it is read', () => {
+    const result = resumeSchema.safeParse({
+      ...cleanAr,
+      experience: [{ ...cleanAr.experience[0]!, startDate: '2021' }],
+    })
+    expect(result.success).toBe(false)
+  })
+})
+
+/**
  * The migration case, and the reason `courses` has a default instead of being
  * required: every resume already sitting in someone's browser was written
  * before this section existed. A required field would fail validation on load

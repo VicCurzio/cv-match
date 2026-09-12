@@ -439,8 +439,9 @@ export function ResumeForm({ resume, profile, atsMode, onChange, onPhotoError }:
               onChange={(e) => patchCourse(index, { institution: e.target.value })}
             />
             <TextField
-              label="Terminó (AAAA-MM)"
-              placeholder="2024-12"
+              label="Terminó"
+              hint="El año solo alcanza: 2025. Si te acordás el mes, 2025-03."
+              placeholder="2025"
               value={item.endDate ?? ''}
               onChange={(e) => patchCourse(index, { endDate: e.target.value || undefined })}
             />
