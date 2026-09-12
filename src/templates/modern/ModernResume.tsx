@@ -56,10 +56,15 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingHorizontal: 28,
   },
+  /**
+   * The circle is capped by the sidebar: 165 wide less 22 of padding each side
+   * leaves 121 points of room, so anything past that would be squeezed out of
+   * round. 112 keeps a hair of air on both sides.
+   */
   photo: {
-    width: 96,
-    height: 96,
-    borderRadius: 48,
+    width: 112,
+    height: 112,
+    borderRadius: 56,
     alignSelf: 'center',
     marginBottom: 16,
     objectFit: 'cover',
