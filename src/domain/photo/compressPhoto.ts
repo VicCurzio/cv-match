@@ -4,10 +4,13 @@
  * the browser stops saving, and the app looks fine until the tab reloads and the
  * resume is gone. Compression here is not an optimisation, it is a requirement.
  *
- * 400x400 JPEG lands around 30 KB, which is plenty for printing at 25 mm.
+ * 600x600 JPEG lands around 45 KB: still nothing against the quota, and it
+ * keeps the photo sharp if a template ever prints it larger than the 25 mm
+ * circle the Moderna uses today. Below ~300 pixels the circle starts to look
+ * soft on paper, which is the failure worth avoiding.
  */
 
-export const PHOTO_SIZE = 400
+export const PHOTO_SIZE = 600
 export const PHOTO_QUALITY = 0.85
 
 export type PhotoResult =
