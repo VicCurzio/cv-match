@@ -140,6 +140,85 @@ describe('courses reach the file as their own section', () => {
   })
 })
 
+/**
+ * Three layout defects a real resume produced at once, all of them visible only
+ * once the document was long enough to break across pages.
+ */
+describe('a long resume lays out correctly', () => {
+  /** Six grouped courses: enough to push a section over a page boundary. */
+  const many = {
+    ...withPhoto,
+    courses: Array.from({ length: 6 }, (_, i) => ({
+      id: `c${i}`,
+      title:
+        'Instrumentación de préstamos, legajo de crédito, asesoramiento comercial y habilidades de venta',
+      institution: 'Banco Credicoop - Gerencia de Formación Integral',
+      endDate: '2025',
+      inProgress: false,
+      detail: '14 horas',
+    })),
+  }
+
+  /**
+   * Swept across lengths on purpose.
+   *
+   * A single fixture is a coin flip: the first version of this test passed
+   * while the real resume it was written for had "CURSOS Y CERTIFICACIONES"
+   * stranded at the foot of page one, because that one fixture happened not to
+   * break at a heading. Walking the content length moves the page boundary
+   * across every section in turn, so some size in the sweep puts a break right
+   * where a heading is.
+   */
+  it('never leaves a section heading alone at the foot of a page', async () => {
+    for (const count of [3, 4, 5, 6, 7, 8, 9, 10]) {
+      const resume = {
+        ...many,
+        courses: many.courses.slice(0, Math.min(count, many.courses.length)),
+        experience: [
+          ...administrativeAr.experience,
+          ...Array.from({ length: Math.max(0, count - 4) }, (_, i) => ({
+            ...administrativeAr.experience[0]!,
+            id: `extra-${i}`,
+          })),
+        ],
+      }
+
+      const blob = await buildPdf(resume, {
+        profile: AR_PROFILE,
+        atsMode: true,
+        template: 'harvard',
+      })
+      const pdf = await readPdf(new Uint8Array(await blob.arrayBuffer()))
+
+      for (const [index, page] of pdf.pages.entries()) {
+        const last = page.at(-1)?.trim() ?? ''
+        const isHeading = /^[A-ZÁÉÍÓÚÑ][A-ZÁÉÍÓÚÑ\s]{3,}$/.test(last)
+        expect(
+          isHeading,
+          `with ${count} items, page ${index + 1} ends on the heading "${last}"`,
+        ).toBe(false)
+      }
+    }
+  }, 30_000)
+
+  it('keeps a long title from running over the date beside it', async () => {
+    const blob = await buildPdf(many, { profile: AR_PROFILE, atsMode: true, template: 'harvard' })
+    const pdf = await readPdf(new Uint8Array(await blob.arrayBuffer()))
+
+    // Overlap shows up as the year fused into the title's own text run.
+    const fused = pdf.lines.filter((l) => /habilidades de venta\s*2025/i.test(l))
+    expect(fused).toEqual([])
+    expect(pdf.text).toContain('2025')
+  })
+
+  it('separates the skills with a visible mark, not just with space', async () => {
+    const pdf = await render({ profile: AR_PROFILE, atsMode: true, template: 'harvard' })
+
+    const separators = pdf.lines.filter((l) => l.trim() === '·')
+    expect(separators.length).toBe(administrativeAr.skills.length - 1)
+  })
+})
+
 describe('the market profile decides what reaches the file', () => {
   it('embeds the photo for Argentina', async () => {
     const pdf = await render({ profile: AR_PROFILE, atsMode: false, template: 'modern' })

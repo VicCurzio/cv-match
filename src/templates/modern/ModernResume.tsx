@@ -1,3 +1,4 @@
+import { Children } from 'react'
 import { Document, Image, Page, StyleSheet, Text, View } from '@react-pdf/renderer'
 import type { Resume } from '@/domain/resume/resumeSchema'
 import { PAGE, formatRange, formatYearMonth } from '@/templates/shared/format'
@@ -93,13 +94,18 @@ interface Props {
  * one page was drawn past the bottom margin and the overflow was lost.
  */
 function MainSection({ title, children }: { title: string; children: React.ReactNode }) {
+  const [first, ...rest] = Children.toArray(children)
+
   return (
     <View style={styles.section}>
-      <View minPresenceAhead={36}>
+      {/* Heading bound to its first entry, so a page never ends on a heading
+          that announces nothing. See the Harvard template for why. */}
+      <View wrap={false}>
         <Text style={styles.sectionTitle}>{title}</Text>
         <View style={styles.sectionRule} />
+        {first}
       </View>
-      {children}
+      {rest}
     </View>
   )
 }

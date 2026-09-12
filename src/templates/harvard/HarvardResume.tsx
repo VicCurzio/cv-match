@@ -1,3 +1,4 @@
+import { Children } from 'react'
 import { Document, Page, StyleSheet, Text, View } from '@react-pdf/renderer'
 import type { Resume } from '@/domain/resume/resumeSchema'
 import { PAGE, contactParts, formatRange, formatYearMonth } from '@/templates/shared/format'
@@ -55,9 +56,18 @@ const styles = StyleSheet.create({
   },
   summary: { fontSize: 10, textAlign: 'justify' },
   entry: { marginBottom: 7 },
-  entryHead: { flexDirection: 'row', justifyContent: 'space-between' },
-  role: { fontFamily: 'Helvetica-Bold', fontSize: 10.5 },
-  dates: { fontSize: 9, color: PAGE.inkFaint },
+  entryHead: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline' },
+  /*
+   * `flex: 1` is what stops a long title from running over the date.
+   *
+   * Without it the title took its natural width, which for a grouped course
+   * like "Instrumentación de préstamos, legajo de crédito, asesoramiento
+   * comercial y habilidades de venta" is wider than the row -- so it printed
+   * straight through the year on the right. With flex it wraps instead.
+   */
+  role: { fontFamily: 'Helvetica-Bold', fontSize: 10.5, flex: 1, paddingRight: 10 },
+  /** Never squeezed: the date is short and has to stay readable and aligned. */
+  dates: { fontSize: 9, color: PAGE.inkFaint, flexShrink: 0 },
   company: { fontSize: 9.5, color: PAGE.inkSoft, marginBottom: 2 },
   bulletRow: { flexDirection: 'row', marginBottom: 1.5 },
   bulletMark: { width: 10, fontSize: 10 },
@@ -72,7 +82,15 @@ const styles = StyleSheet.create({
    * elements, where there is nothing to hyphenate.
    */
   tagRow: { flexDirection: 'row', flexWrap: 'wrap' },
-  tag: { fontSize: 10, marginRight: 14 },
+  tag: { fontSize: 10 },
+  /**
+   * The separator is its OWN element, not a character inside the text.
+   *
+   * Spacing alone read as a ragged column of loose words with holes in it. A
+   * dot groups them back into a list -- and kept apart as an element, the line
+   * still breaks between items, where there is nothing to hyphenate.
+   */
+  tagSeparator: { fontSize: 10, color: PAGE.inkFaint, marginHorizontal: 6 },
 })
 
 interface Props {
@@ -80,25 +98,35 @@ interface Props {
 }
 
 /**
- * A section MAY be split across pages; a single entry may not.
+ * A section: its heading, then its entries.
  *
- * It used to carry `wrap={false}`, which reads as "keep this together" and in
- * practice means "this block cannot be split at all". An experience section
- * longer than one page then had nowhere to go: react-pdf pushed it whole onto a
- * fresh page and everything past the bottom margin was simply not drawn. On a
- * two-page resume -- which Argentina allows -- that silently loses jobs.
+ * Two failures shaped this, and the fix has to avoid both at once.
  *
- * `minPresenceAhead` is what actually solves the thing `wrap={false}` was
- * reaching for: a heading with nothing under it moves to the next page instead
- * of being stranded at the bottom.
+ * `wrap={false}` on the WHOLE section reads as "keep this together" and means
+ * "this block cannot be split". A section longer than one page then has nowhere
+ * to go: react-pdf pushes it whole onto a fresh page and everything past the
+ * bottom margin is simply not drawn. On a two-page resume -- which Argentina
+ * allows -- that silently loses jobs.
+ *
+ * `minPresenceAhead` on the heading was the next attempt and did not hold:
+ * "CURSOS Y CERTIFICACIONES" still landed alone at the foot of page one with
+ * every course on page two. Asking for a number of points ahead is a guess
+ * about how tall the next entry will be, and the guess was wrong.
+ *
+ * So: the heading and the FIRST entry are bound into one unbreakable block --
+ * which is the thing actually wanted -- and the rest of the entries stay free
+ * to flow, because a section with six entries has to break somewhere.
  */
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
+  const [first, ...rest] = Children.toArray(children)
+
   return (
     <View style={styles.section}>
-      <Text style={styles.sectionTitle} minPresenceAhead={36}>
-        {title}
-      </Text>
-      {children}
+      <View wrap={false}>
+        <Text style={styles.sectionTitle}>{title}</Text>
+        {first}
+      </View>
+      {rest}
     </View>
   )
 }
@@ -191,11 +219,18 @@ export function HarvardResume({ resume }: Props) {
         {skills.length > 0 ? (
           <Section title="HABILIDADES">
             <View style={styles.tagRow}>
-              {skills.map((skill, index) => (
+              {skills.flatMap((skill, index) => [
+                ...(index > 0
+                  ? [
+                      <Text key={`sep-${index}`} style={styles.tagSeparator}>
+                        ·
+                      </Text>,
+                    ]
+                  : []),
                 <Text key={index} style={styles.tag}>
                   {skill}
-                </Text>
-              ))}
+                </Text>,
+              ])}
             </View>
           </Section>
         ) : null}
@@ -203,11 +238,18 @@ export function HarvardResume({ resume }: Props) {
         {resume.languages.length > 0 ? (
           <Section title="IDIOMAS">
             <View style={styles.tagRow}>
-              {resume.languages.map((language) => (
+              {resume.languages.flatMap((language, index) => [
+                ...(index > 0
+                  ? [
+                      <Text key={`sep-${language.id}`} style={styles.tagSeparator}>
+                        ·
+                      </Text>,
+                    ]
+                  : []),
                 <Text key={language.id} style={styles.tag}>
-                  {language.name} ({language.level})
-                </Text>
-              ))}
+                  {`${language.name} (${language.level})`}
+                </Text>,
+              ])}
             </View>
           </Section>
         ) : null}
