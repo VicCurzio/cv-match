@@ -5,6 +5,10 @@ Versionado según [SemVer](https://semver.org/lang/es/).
 
 ## [No publicado]
 
+### Arreglado
+
+- **En un celular de 360 px el editor se salía de la pantalla.** Los selectores nativos se ensanchan hasta su opción más larga ("Internacional (EEUU, Reino Unido, Canadá)") y la grilla del editor no dejaba achicarse a su contenido. En Windows entraba por pocos píxeles; en Linux, y en un Android con fuente más ancha, no. Lo encontró el test de celular en la primera corrida en CI. El test ahora usa 360 px y fuerza una fuente ancha, así falla igual en cualquier máquina; se probó que falla sin el arreglo.
+
 ### Agregado: tests de punta a punta
 
 - **18 escenarios con Playwright**, en Chromium, contra el build de producción. Cubren inicio y botón Atrás, versiones (crear, recargar, borrar, id inexistente, nombre del PDF), la comparación con el aviso, las viñetas con números, el nivel de idioma, la vista previa dibujada bajo la política de seguridad, dos pestañas, empezar uno nuevo con copia, un CV guardado con el formato viejo y el ancho de un celular.

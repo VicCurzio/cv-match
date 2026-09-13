@@ -145,10 +145,16 @@ export function EditorScreen({ state }: { state: ResumeState }) {
           ) : null}
         </div>
 
-        <div className="flex flex-wrap items-center gap-2">
+        {/*
+          A native select is as wide as its longest option, and "Internacional
+          (EEUU, Reino Unido, Canadá)" is long: on a 360 px phone with a wider
+          font it ran off the screen. `max-w-full` lets it shrink and clip the
+          label instead. Same for the other two selects.
+        */}
+        <div className="flex min-w-0 max-w-full flex-wrap items-center gap-2">
           <select
             aria-label={copy.start.marketQuestion}
-            className="h-9 rounded-lg border border-border bg-card px-3 text-sm"
+            className="h-9 min-w-0 max-w-full rounded-lg border border-border bg-card px-3 text-sm"
             value={settings.market}
             onChange={(e) => changeMarket(e.target.value as MarketId)}
           >
@@ -161,7 +167,7 @@ export function EditorScreen({ state }: { state: ResumeState }) {
 
           <select
             aria-label="Plantilla"
-            className="h-9 rounded-lg border border-border bg-card px-3 text-sm disabled:opacity-50"
+            className="h-9 min-w-0 max-w-full rounded-lg border border-border bg-card px-3 text-sm disabled:opacity-50"
             value={settings.template}
             disabled={settings.atsMode}
             onChange={(e) => setSettings({ template: e.target.value as 'harvard' | 'modern' })}
@@ -184,7 +190,7 @@ export function EditorScreen({ state }: { state: ResumeState }) {
       <div className="flex flex-wrap items-center gap-2">
         <select
           aria-label={copy.versions.selectorLabel}
-          className="h-9 rounded-lg border border-border bg-card px-3 text-sm"
+          className="h-9 min-w-0 max-w-full rounded-lg border border-border bg-card px-3 text-sm"
           value={activeVersion?.id ?? ''}
           onChange={(e) => {
             navigate(e.target.value ? paths.version(e.target.value) : paths.editor)
@@ -252,7 +258,7 @@ export function EditorScreen({ state }: { state: ResumeState }) {
       {saveError ? <Notice tone="warning" live>{saveError}</Notice> : null}
       {message ? <Notice live>{message}</Notice> : null}
 
-      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(420px,42%)]">
+      <div className="grid grid-cols-[minmax(0,1fr)] gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(420px,42%)]">
         <div className="flex flex-col gap-4">
           {activeVersion ? (
             <VersionForm
