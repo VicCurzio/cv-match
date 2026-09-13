@@ -18,7 +18,8 @@ import { Notice } from '@/shared/ui/Card'
 import { copy } from '@/shared/config/copy'
 import { listOf } from '@/shared/utils/text'
 import { resumeFileName } from '@/templates/buildPdf'
-import { PdfLightbox, PdfPagePlaceholder, PdfPages, usePdfDocument } from './PdfPages'
+import { PdfLightbox, PdfPagePlaceholder, PdfPages } from './PdfPages'
+import { usePdfDocument } from './usePdfDocument'
 import { ResumeForm } from './ResumeForm'
 import { DeleteVersionDialog, NewVersionDialog } from './VersionDialogs'
 import { VersionForm } from './VersionForm'
@@ -30,7 +31,17 @@ export function EditorScreen({ state }: { state: ResumeState }) {
   const { base, versions, activeVersion, updateVersion } = state
   const navigate = useNavigate()
   const location = useLocation()
-  const [message, setMessage] = useState<string | null>(null)
+
+  /*
+   * A notice belongs to the address it was raised on, and is derived from it
+   * rather than cleared in an effect. Without this, "Cambiamos a la plantilla
+   * Harvard" survived the back button and showed up over another version that
+   * nobody had changed.
+   */
+  const [notice, setNotice] = useState<{ text: string; path: string } | null>(null)
+  const message = notice?.path === location.pathname ? notice.text : null
+  const setMessage = (text: string | null) =>
+    setNotice(text === null ? null : { text, path: location.pathname })
   const [importing, setImporting] = useState(false)
   const [writingLetter, setWritingLetter] = useState(false)
   const [creatingVersion, setCreatingVersion] = useState(false)
@@ -257,7 +268,10 @@ export function EditorScreen({ state }: { state: ResumeState }) {
           <div className="flex flex-wrap gap-2">
             <Button
               variant="primary"
-              disabled={!preview.blob}
+              // Not while a new render is on its way: right after switching
+              // version the Blob is still the previous version's, and it would
+              // download under the new version's file name.
+              disabled={!preview.blob || preview.building}
               onClick={() => preview.blob && downloadBlob(preview.blob, resumeFileName(resume, activeVersion?.company))}
             >
               <Download />
@@ -284,7 +298,12 @@ export function EditorScreen({ state }: { state: ResumeState }) {
               type="file"
               accept="application/json,.json"
               className="hidden"
-              onChange={(e) => void handleImport(e.target.files?.[0])}
+              onChange={(e) => {
+              void handleImport(e.target.files?.[0])
+              // Cleared so choosing the same file again fires a change: without
+              // it, re-loading a copy after editing silently did nothing.
+              e.target.value = ''
+            }}
             />
           </div>
 

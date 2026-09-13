@@ -27,9 +27,17 @@ screens  ->  templates  ->  domain  ->  shared  ->  assets
 screens  ---------------->  domain
 ```
 
-Un sentido, nunca al revés. `shared/` no importa nada de `domain/`. Dos carpetas de `domain/` distintas no se importan entre sí: si una necesita algo de otra, ese algo sube a `shared/` o lo orquesta la pantalla.
+Un sentido, nunca al revés. `shared/` no importa nada de `domain/`.
+
+Dentro de `domain/`, **`domain/resume` es el contrato**: el esquema del CV, del que dependen todos los demás (`market`, `analysis`, `letter`, `posting`, `generate`). El único otro cruce es `analysis -> market`, porque las reglas se juzgan contra un perfil de mercado. Fuera de eso las carpetas de `domain/` no se importan entre sí, y `resume` no importa de ninguna: si una necesita algo de otra, ese algo sube a `shared/` o lo orquesta la pantalla.
 
 `npm run check:layers` lo verifica y **se autoverifica primero**: `--self-test` escribe un archivo que viola la regla y falla si el guard no lo rechaza. Si tocás `scripts/check-layers.mjs`, mantené ese comportamiento — un control que puede apagarse solo necesita su propia prueba.
+
+## Rutas y publicación
+
+- Las direcciones se arman en `screens/routes.ts`, nunca a mano en un componente. **Una dirección no lleva datos del CV**: una versión va por su id aleatorio, nunca por la empresa ni el puesto.
+- `base` de Vite es `/cv-match/` y **tiene que ser absoluta**. Con `./`, recargar en una dirección interna pide los scripts en una carpeta que no existe y la página queda en blanco, solo en GitHub Pages.
+- El build copia `index.html` a `404.html`: es lo que permite recargar en cualquier dirección en Pages. `npm run check:build` lo verifica en el deploy, con autoprueba.
 
 ## Convenciones
 

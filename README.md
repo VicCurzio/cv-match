@@ -50,7 +50,7 @@ Tres capas, y las tres hacen falta:
 
 ## Cómo se despliega
 
-Sitio estático, publicado en GitHub Pages por `.github/workflows/deploy.yml` en cada push a `main`. El workflow corre `npm run verify` antes de construir, así que no se publica nada que no pasaría un commit local.
+Sitio estático, publicado en GitHub Pages por `.github/workflows/deploy.yml` en cada push a `main`. El workflow corre `npm run verify` antes de construir, así que no se publica nada que no pasaría un commit local, y `npm run check:build` después, que frena la publicación si falta el `404.html` o las rutas de los archivos no están bajo `/cv-match/`: las dos cosas solo se rompen en Pages.
 
 Para conectarlo la primera vez: creá el repositorio en GitHub, agregalo como remoto, `git push -u origin main`, y en Settings → Pages elegí **GitHub Actions** como origen. Hasta que ese último paso esté hecho, el workflow de deploy falla con `Get Pages site failed`.
 

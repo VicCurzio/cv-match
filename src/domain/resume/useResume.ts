@@ -43,7 +43,14 @@ export interface ResumeState {
   dismissUnreadable: () => void
   /** Edits the base, whatever is selected. */
   setResume: (next: Resume | ((current: Resume) => Resume)) => void
+  /** Patches the settings of whatever is selected: base or version. */
   setSettings: (patch: Partial<Settings>) => void
+  /**
+   * Patches the base's settings whatever is selected. The start questions are
+   * about the resume itself; answered while the saved selection is a version,
+   * they used to land on that version and leave the base untouched.
+   */
+  setBaseSettings: (patch: Partial<Settings>) => void
   /** Replaces the base: an imported resume. Versions stay, layered on the new facts. */
   replaceAll: (resume: Resume) => void
   /** Replaces everything: an imported export, versions included. */
@@ -143,6 +150,10 @@ export function useResume(selectedVersionId?: string | null): ResumeState {
     [activeVersionId, versions, updateVersion],
   )
 
+  const patchBaseSettings = useCallback((patch: Partial<Settings>) => {
+    setBaseSettings((current) => ({ ...current, ...patch }))
+  }, [])
+
   const replaceAll = useCallback((next: Resume) => setBase(next), [])
 
   const replaceDocument = useCallback((doc: StoredDocument) => {
@@ -183,6 +194,7 @@ export function useResume(selectedVersionId?: string | null): ResumeState {
     dismissUnreadable,
     setResume,
     setSettings,
+    setBaseSettings: patchBaseSettings,
     replaceAll,
     replaceDocument,
     addVersion,

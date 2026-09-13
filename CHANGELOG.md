@@ -5,6 +5,20 @@ Versionado según [SemVer](https://semver.org/lang/es/).
 
 ## [No publicado]
 
+### Arreglado (revisión general, probado en el build de producción)
+
+- **"Empezar" le aplicaba las respuestas a una versión.** Con un CV guardado cuya última vista era una versión, el mercado y el filtro elegidos en el inicio cambiaban esa versión y dejaban el CV base como estaba. Ahora van al CV base.
+- **Se podía descargar el PDF equivocado.** Justo después de cambiar de versión, el botón bajaba el PDF de la versión anterior con el nombre de la nueva. Queda deshabilitado mientras se arma el nuevo.
+- **Los avisos quedaban colgados** entre pantallas: "Cambiamos a la plantilla Harvard" sobrevivía al botón Atrás. Ahora un aviso pertenece a la dirección donde apareció.
+- **Cargar el mismo `.json` dos veces seguidas no hacía nada**, porque el selector de archivo no se reiniciaba.
+- **Volver al inicio en la misma visita** no ofrecía "Seguir con el CV guardado" si el CV todavía no se había guardado nunca.
+- El hook que abre el PDF salió del archivo de componentes: mezclados, rompían la recarga en caliente en desarrollo (aviso del linter).
+
+### Cambiado
+
+- **La pantalla de inicio carga 112 KB en vez de 567 KB** (comprimidos). El editor, que trae el generador de PDF, se descarga recién al entrar.
+- `AGENTS.md`: la regla de capas dentro de `domain/` decía que las carpetas no se importan entre sí, y el código siempre tuvo a `domain/resume` como contrato de todas. Se corrigió el texto, no el código, y se sumó una sección de rutas y publicación.
+
 ### Agregado: rutas (probado en el build de producción)
 
 - **Atrás y Adelante del navegador funcionan.** Antes la app era una sola dirección: Atrás sacaba del sitio y recargar volvía al inicio. Rutas: `/`, `/editor`, `/editor/versions/:versionId` y un 404 con vuelta al inicio. Atrás también cierra la vista ampliada del CV.

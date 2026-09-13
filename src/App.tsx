@@ -1,10 +1,28 @@
-import { useState } from 'react'
+import { Suspense, lazy, useState } from 'react'
 import { Navigate, Route, Routes, useMatch, useNavigate } from 'react-router'
 import { useResume } from '@/domain/resume/useResume'
-import { EditorScreen } from '@/screens/editor/EditorScreen'
 import { NotFoundScreen } from '@/screens/not-found/NotFoundScreen'
 import { VERSION_ROUTE, editorAccess, paths, resumePath } from '@/screens/routes'
 import { StartScreen } from '@/screens/start/StartScreen'
+
+/*
+ * The editor is loaded when someone gets to it, not with the start screen. It
+ * carries the PDF renderer and its layout engine -- over half a megabyte
+ * compressed -- and the start screen is two questions: on a phone with a weak
+ * signal that was several seconds of blank page before anything to read.
+ */
+const EditorScreen = lazy(() =>
+  import('@/screens/editor/EditorScreen').then((module) => ({ default: module.EditorScreen })),
+)
+
+function EditorLoading() {
+  return (
+    <div className="mx-auto flex max-w-[1400px] flex-col gap-6 px-6 py-8" aria-busy="true">
+      <div className="h-8 w-48 animate-pulse rounded-lg bg-card" />
+      <div className="h-[60vh] animate-pulse rounded-card bg-card" />
+    </div>
+  )
+}
 
 export default function App() {
   const navigate = useNavigate()
@@ -26,7 +44,11 @@ export default function App() {
       versionId: selected ?? null,
       versionIds,
     })
-    return access.kind === 'redirect' ? <Navigate to={access.to} replace /> : <EditorScreen state={state} />
+    return access.kind === 'redirect' ? <Navigate to={access.to} replace /> : (
+      <Suspense fallback={<EditorLoading />}>
+        <EditorScreen state={state} />
+      </Suspense>
+    )
   }
 
   return (
@@ -35,9 +57,11 @@ export default function App() {
         path={paths.start}
         element={
           <StartScreen
-            hasSaved={state.hasSaved}
+            // Answered earlier in this visit counts: going back from the editor
+            // must still offer to continue, not only to start over.
+            hasSaved={state.hasSaved || started}
             onStart={(settings) => {
-              state.setSettings(settings)
+              state.setBaseSettings(settings)
               setStarted(true)
               navigate(paths.editor)
             }}

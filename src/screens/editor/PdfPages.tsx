@@ -1,10 +1,10 @@
-import type { PDFDocumentLoadingTask, PDFDocumentProxy, RenderTask } from 'pdfjs-dist'
+import type { PDFDocumentProxy, RenderTask } from 'pdfjs-dist'
 import { X, ZoomIn } from 'lucide-react'
 import { useEffect, useRef, useState, type RefObject } from 'react'
 import { Button } from '@/shared/ui/Button'
 import { Dialog } from '@/shared/ui/Dialog'
 import { copy } from '@/shared/config/copy'
-import { canvasSize, loadPdfjs } from '@/shared/utils/pdfjs'
+import { canvasSize } from '@/shared/utils/pdfjs'
 
 /**
  * The preview as the sheets themselves, drawn from the very Blob the download
@@ -19,57 +19,6 @@ import { canvasSize, loadPdfjs } from '@/shared/utils/pdfjs'
 
 /** A4 height over width, for the space a page takes before it is drawn. */
 const A4_RATIO = 841.89 / 595.28
-
-/**
- * Opens the Blob with pdfjs, keeping the previous document on screen until the
- * next one is ready: re-rendering on every edit must not blink the preview.
- */
-export function usePdfDocument(blob: Blob | null): { doc: PDFDocumentProxy | null; failed: boolean } {
-  const [doc, setDoc] = useState<PDFDocumentProxy | null>(null)
-  const [failed, setFailed] = useState(false)
-  // pdfjs frees a document through the task that loaded it, not the document.
-  const current = useRef<PDFDocumentLoadingTask | null>(null)
-
-  useEffect(() => {
-    if (!blob) return
-    let cancelled = false
-
-    void (async () => {
-      try {
-        const pdfjs = await loadPdfjs()
-        const data = new Uint8Array(await blob.arrayBuffer())
-        const task = pdfjs.getDocument({ data })
-        const next = await task.promise
-        if (cancelled) {
-          void task.destroy()
-          return
-        }
-        const previous = current.current
-        current.current = task
-        setDoc(next)
-        setFailed(false)
-        void previous?.destroy()
-      } catch (cause) {
-        if (cancelled) return
-        console.warn('No se pudo dibujar la vista previa; se muestra el visor del navegador.', cause)
-        setFailed(true)
-      }
-    })()
-
-    return () => {
-      cancelled = true
-    }
-  }, [blob])
-
-  useEffect(
-    () => () => {
-      void current.current?.destroy()
-    },
-    [],
-  )
-
-  return { doc, failed }
-}
 
 /** The element's width in CSS pixels, updated on resize but not on every frame of it. */
 function useWidth(ref: RefObject<HTMLElement | null>): number {
