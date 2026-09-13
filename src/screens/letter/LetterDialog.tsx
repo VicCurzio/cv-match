@@ -23,20 +23,52 @@ import { buildLetterPdf, letterFileName } from '@/templates/buildPdf'
  * it gets sent.
  */
 
+/** What the person typed. Opening and closing are rebuilt from the resume. */
+export interface LetterFields {
+  role: string
+  company: string
+  recipient: string
+  body: string
+}
+
 interface Props {
   resume: Resume
   profile: MarketProfile
   atsMode: boolean
   template: 'harvard' | 'modern'
+  /** A version's saved letter. Without one the dialog starts blank, as for the base. */
+  initial?: LetterFields
+  /**
+   * Called on every edit, so a version keeps its letter. Before versions the
+   * letter lived only in this dialog's state and was gone on reload -- a lost
+   * paragraph that took someone twenty minutes to write.
+   */
+  onChange?: (fields: LetterFields) => void
   onClose: () => void
 }
 
-export function LetterDialog({ resume, profile, atsMode, template, onClose }: Props) {
-  const [role, setRole] = useState('')
-  const [company, setCompany] = useState('')
-  const [recipient, setRecipient] = useState('')
-  const [body, setBody] = useState(BODY_PLACEHOLDER)
+export function LetterDialog({
+  resume,
+  profile,
+  atsMode,
+  template,
+  initial,
+  onChange,
+  onClose,
+}: Props) {
+  const [fields, setFields] = useState<LetterFields>(
+    () => initial ?? { role: '', company: '', recipient: '', body: BODY_PLACEHOLDER },
+  )
   const [busy, setBusy] = useState(false)
+  const { role, company, recipient, body } = fields
+
+  // Reported from the handler, not from an effect: an effect on `fields` would
+  // also fire for the parent's re-render it triggers.
+  function update(patch: Partial<LetterFields>) {
+    const next = { ...fields, ...patch }
+    setFields(next)
+    onChange?.(next)
+  }
 
   // The header and closing follow the job fields; only the body is the writer's.
   const letter: Letter = useMemo(
@@ -49,7 +81,7 @@ export function LetterDialog({ resume, profile, atsMode, template, onClose }: Pr
   async function download() {
     setBusy(true)
     const blob = await buildLetterPdf(resume, letter, { profile, atsMode, template })
-    downloadBlob(blob, letterFileName(resume))
+    downloadBlob(blob, letterFileName(resume, company))
     setBusy(false)
   }
 
@@ -71,13 +103,13 @@ export function LetterDialog({ resume, profile, atsMode, template, onClose }: Pr
             label="Puesto al que te postulás"
             placeholder="Auxiliar administrativa"
             value={role}
-            onChange={(e) => setRole(e.target.value)}
+            onChange={(e) => update({ role: e.target.value })}
           />
           <TextField
             label="Empresa"
             placeholder="Banco Credicoop"
             value={company}
-            onChange={(e) => setCompany(e.target.value)}
+            onChange={(e) => update({ company: e.target.value })}
           />
         </div>
 
@@ -86,7 +118,7 @@ export function LetterDialog({ resume, profile, atsMode, template, onClose }: Pr
           hint="Si sabés el nombre, ponelo. Si no, queda 'Equipo de Selección'."
           placeholder="Equipo de Selección"
           value={recipient}
-          onChange={(e) => setRecipient(e.target.value)}
+          onChange={(e) => update({ recipient: e.target.value })}
         />
 
         <div className="rounded-lg border border-border p-3">
@@ -99,10 +131,10 @@ export function LetterDialog({ resume, profile, atsMode, template, onClose }: Pr
           hint={copy.letter.bodyHint}
           className="min-h-36"
           value={body}
-          onChange={(e) => setBody(e.target.value)}
+          onChange={(e) => update({ body: e.target.value })}
           onFocus={(e) => {
             // Clear the guidance the first time, so nobody types around it.
-            if (e.target.value === BODY_PLACEHOLDER) setBody('')
+            if (e.target.value === BODY_PLACEHOLDER) update({ body: '' })
           }}
         />
 

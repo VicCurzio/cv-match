@@ -5,6 +5,19 @@ Versionado según [SemVer](https://semver.org/lang/es/).
 
 ## [No publicado]
 
+### Agregado: versiones por postulación (probado en el navegador)
+
+- **Un CV base y una versión por aviso.** La versión es una capa, no una copia: guarda solo lo que cambia de cómo se cuenta el CV (titular, perfil, orden y ocultamiento de habilidades, qué experiencias, estudios y cursos se muestran, mercado y plantilla) y lee los hechos del base. Un error corregido una vez queda corregido en todas las versiones.
+- **La capa no tiene dónde guardar un hecho distinto.** Su esquema es estricto: un objeto con un puesto, una fecha o un dato de contacto se rechaza. Que adaptar no sea inventar lo hace cumplir el código, no una promesa.
+- Lo que el base cambia por debajo se resuelve hacia mostrar de más, nunca hacia perder: un trabajo nuevo aparece en todas las versiones, una habilidad renombrada reaparece al final.
+- **La carta de presentación se guarda con su versión.** Antes vivía solo en el estado del diálogo y se perdía al recargar.
+- Los PDF de una versión llevan la empresa en el nombre: `Ana-Gomez-CV-Banco-Columbia.pdf`.
+
+### Arreglado
+
+- **Migración del documento guardado a la versión 2.** `schemaVersion` es un literal: subirlo sin migrar habría mandado el CV de todos los que ya usan la app a la copia de "no se pudo leer". Un documento v1 carga como CV base sin versiones, y el test que lo cubre se probó sacando la migración: falla.
+- Importar un `.json` exportado se quedaba solo con el CV y habría descartado las versiones sin avisar.
+
 ### Agregado (probado en el navegador)
 
 - **Content-Security-Policy** en el sitio construido, como `meta` (GitHub Pages sirve archivos estáticos y no pone encabezados). `connect-src 'self'` convierte la promesa del producto —que el CV no sale de la máquina— en algo que hace cumplir el navegador y no la buena fe del código: ni un script inyectado ni una dependencia que decida llamar a casa pueden alcanzar otro origen. Se inyecta solo en el build; en desarrollo la misma política bloquearía el websocket de Vite.

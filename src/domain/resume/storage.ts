@@ -1,5 +1,7 @@
 import { z } from 'zod'
-import { RESUME_VERSION, resumeSchema, type Resume } from './resumeSchema'
+import { resumeSchema, type Resume } from './resumeSchema'
+import { settingsSchema } from './settings'
+import { versionSchema } from './versions'
 
 /**
  * Everything lives in the browser. There is no server to send a resume to, which
@@ -20,36 +22,68 @@ const STORAGE_KEY = 'cv-match:document'
  */
 const BACKUP_KEY = 'cv-match:unreadable'
 
-export const settingsSchema = z.object({
-  market: z.enum(['AR', 'INTL']),
-  atsMode: z.boolean(),
-  template: z.enum(['harvard', 'modern']),
+export { defaultSettings, settingsSchema, type Settings } from './settings'
+
+/** The shape of what is saved. Bumped when that shape changes, never silently. */
+export const DOCUMENT_VERSION = 2
+
+const localizedResumes = z.object({
+  es: resumeSchema,
+  en: resumeSchema.optional(),
 })
 
-export type Settings = z.infer<typeof settingsSchema>
+/**
+ * Version 1, kept only to be read and upgraded. Every browser that used the app
+ * before versions existed holds one of these.
+ */
+const documentV1Schema = z.object({
+  schemaVersion: z.literal(1),
+  settings: settingsSchema,
+  activeLocale: z.enum(['es', 'en']),
+  resumes: localizedResumes,
+})
 
 /**
  * The envelope carries a resume per locale even though only `es` exists today.
  * Translation (feature 0009) needs a second version, and adding it to the shape
  * later would mean migrating whatever people already have saved.
+ *
+ * Version 2 adds the versions aimed at job postings (feature 0011). `settings`
+ * and `resumes` are the BASE: the facts, and how the base is exported.
  */
 export const documentSchema = z.object({
-  schemaVersion: z.literal(RESUME_VERSION),
+  schemaVersion: z.literal(DOCUMENT_VERSION),
   settings: settingsSchema,
   activeLocale: z.enum(['es', 'en']),
-  resumes: z.object({
-    es: resumeSchema,
-    en: resumeSchema.optional(),
-  }),
+  resumes: localizedResumes,
+  versions: z.array(versionSchema),
+  /** `null` is the base. An id that matches no version also falls back to it. */
+  activeVersionId: z.string().nullable(),
 })
 
 export type StoredDocument = z.infer<typeof documentSchema>
 
-export const defaultSettings = (): Settings => ({
-  market: 'AR',
-  atsMode: false,
-  template: 'modern',
-})
+/**
+ * Reads any document this app has ever written, upgraded to the current shape.
+ *
+ * `schemaVersion` is a literal, so without this step the day the number went
+ * up every resume already saved would stop validating -- and a document that
+ * does not validate is set aside as unreadable and replaced by the autosave.
+ * Raising the number without a migration is how everyone's resume gets lost at
+ * once, on a deploy, with nothing on screen. `storage.test.ts` holds a real v1
+ * document and fails if this is removed.
+ */
+export function upgradeDocument(json: unknown): StoredDocument | null {
+  const current = documentSchema.safeParse(json)
+  if (current.success) return current.data
+
+  const v1 = documentV1Schema.safeParse(json)
+  if (v1.success) {
+    return { ...v1.data, schemaVersion: DOCUMENT_VERSION, versions: [], activeVersionId: null }
+  }
+
+  return null
+}
 
 export type SaveResult =
   | { ok: true }
@@ -115,8 +149,8 @@ export function loadDocument(): LoadResult {
     return unreadable(raw)
   }
 
-  const result = documentSchema.safeParse(parsed)
-  return result.success ? { status: 'ok', doc: result.data } : unreadable(raw)
+  const doc = upgradeDocument(parsed)
+  return doc ? { status: 'ok', doc } : unreadable(raw)
 }
 
 /**
@@ -166,7 +200,8 @@ export function clearDocument(): void {
 }
 
 export type ImportResult =
-  | { ok: true; resume: Resume }
+  /** `document` is there when the file was a whole export, versions included. */
+  | { ok: true; resume: Resume; document?: StoredDocument }
   | { ok: false; message: string }
 
 /** Anything read from a file is validated before it reaches app state. */
@@ -178,9 +213,13 @@ export function parseResumeJson(text: string): ImportResult {
     return { ok: false, message: 'El archivo no es un .json válido.' }
   }
 
-  // Accept both a bare resume and a full exported document.
-  const asDocument = documentSchema.safeParse(json)
-  if (asDocument.success) return { ok: true, resume: asDocument.data.resumes.es }
+  /*
+   * Accept both a bare resume and a full exported document. The document comes
+   * back whole: returning only `resumes.es`, as this did before versions, would
+   * import someone's file and throw their versions away without a word.
+   */
+  const asDocument = upgradeDocument(json)
+  if (asDocument) return { ok: true, resume: asDocument.resumes.es, document: asDocument }
 
   const asResume = resumeSchema.safeParse(json)
   if (asResume.success) return { ok: true, resume: asResume.data }

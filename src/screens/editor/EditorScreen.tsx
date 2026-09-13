@@ -1,11 +1,13 @@
-import { Download, FileJson, FileUp, Mail, Upload } from 'lucide-react'
+import { Download, FileJson, FileUp, Mail, Plus, Trash2, Upload } from 'lucide-react'
 import { useMemo, useRef, useState } from 'react'
 import { runAnalysis } from '@/domain/analysis/runAnalysis'
 import { downloadBlob, downloadJson } from '@/domain/export/download'
 import { MARKET_PROFILES, forbiddenFields, type MarketId } from '@/domain/market/marketProfile'
+import { BODY_PLACEHOLDER } from '@/domain/letter/letterModel'
 import { FIELD_LABEL } from '@/domain/resume/resumeSchema'
 import { parseResumeJson } from '@/domain/resume/storage'
 import type { ResumeState } from '@/domain/resume/useResume'
+import { versionLabel } from '@/domain/resume/versions'
 import { ImportDialog } from '@/screens/import/ImportDialog'
 import { LetterDialog } from '@/screens/letter/LetterDialog'
 import { ReviewPanel } from '@/screens/review/ReviewPanel'
@@ -15,14 +17,19 @@ import { copy } from '@/shared/config/copy'
 import { listOf } from '@/shared/utils/text'
 import { resumeFileName } from '@/templates/buildPdf'
 import { ResumeForm } from './ResumeForm'
+import { DeleteVersionDialog, NewVersionDialog } from './VersionDialogs'
+import { VersionForm } from './VersionForm'
 import { usePdfPreview } from './usePdfPreview'
 
 export function EditorScreen({ state }: { state: ResumeState }) {
   const { resume, settings, setResume, setSettings, replaceAll, saveError } = state
   const { unreadable, dismissUnreadable } = state
+  const { base, versions, activeVersion, selectVersion, updateVersion } = state
   const [message, setMessage] = useState<string | null>(null)
   const [importing, setImporting] = useState(false)
   const [writingLetter, setWritingLetter] = useState(false)
+  const [creatingVersion, setCreatingVersion] = useState(false)
+  const [deletingVersion, setDeletingVersion] = useState(false)
   const fileInput = useRef<HTMLInputElement>(null)
 
   const profile = MARKET_PROFILES[settings.market]
@@ -85,7 +92,9 @@ export function EditorScreen({ state }: { state: ResumeState }) {
     if (!file) return
     const result = parseResumeJson(await file.text())
     if (result.ok) {
-      replaceAll(result.resume)
+      // A whole export brings its versions back; a bare resume replaces the facts.
+      if (result.document) state.replaceDocument(result.document)
+      else replaceAll(result.resume)
       setMessage('Copia cargada.')
     } else {
       setMessage(result.message)
@@ -102,6 +111,12 @@ export function EditorScreen({ state }: { state: ResumeState }) {
           <h1 className="mt-1 text-2xl font-semibold tracking-tight">
             {resume.personal.fullName || 'Tu CV'}
           </h1>
+          {activeVersion ? (
+            <p className="mt-0.5 text-sm text-muted-foreground">
+              {copy.versions.forCompany(versionLabel(activeVersion))}
+              {activeVersion.role ? ` · ${activeVersion.role}` : ''}
+            </p>
+          ) : null}
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
@@ -140,6 +155,35 @@ export function EditorScreen({ state }: { state: ResumeState }) {
         </div>
       </header>
 
+      <div className="flex flex-wrap items-center gap-2">
+        <select
+          aria-label={copy.versions.selectorLabel}
+          className="h-9 rounded-lg border border-border bg-card px-3 text-sm"
+          value={activeVersion?.id ?? ''}
+          onChange={(e) => {
+            selectVersion(e.target.value || null)
+            setMessage(null)
+          }}
+        >
+          <option value="">{copy.versions.base}</option>
+          {versions.map((version) => (
+            <option key={version.id} value={version.id}>
+              {copy.versions.forCompany(versionLabel(version))}
+            </option>
+          ))}
+        </select>
+        <Button size="sm" onClick={() => setCreatingVersion(true)}>
+          <Plus />
+          {copy.versions.create}
+        </Button>
+        {activeVersion ? (
+          <Button size="sm" variant="ghost" onClick={() => setDeletingVersion(true)}>
+            <Trash2 />
+            {copy.versions.remove}
+          </Button>
+        ) : null}
+      </div>
+
       {/*
         A saved document that could not be read is offered back before the
         autosave writes over it. It is the one failure in this app that destroys
@@ -173,13 +217,25 @@ export function EditorScreen({ state }: { state: ResumeState }) {
 
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(420px,42%)]">
         <div className="flex flex-col gap-4">
-          <ResumeForm
-            resume={resume}
-            profile={profile}
-            atsMode={settings.atsMode}
-            onChange={setResume}
-            onPhotoError={setMessage}
-          />
+          {activeVersion ? (
+            <VersionForm
+              base={base}
+              version={activeVersion}
+              onChange={(change) => updateVersion(activeVersion.id, change)}
+              onEditBase={() => {
+                selectVersion(null)
+                setMessage(null)
+              }}
+            />
+          ) : (
+            <ResumeForm
+              resume={base}
+              profile={profile}
+              atsMode={settings.atsMode}
+              onChange={setResume}
+              onPhotoError={setMessage}
+            />
+          )}
         </div>
 
         <div className="flex flex-col gap-4 lg:sticky lg:top-6 lg:self-start">
@@ -187,7 +243,7 @@ export function EditorScreen({ state }: { state: ResumeState }) {
             <Button
               variant="primary"
               disabled={!preview.blob}
-              onClick={() => preview.blob && downloadBlob(preview.blob, resumeFileName(resume))}
+              onClick={() => preview.blob && downloadBlob(preview.blob, resumeFileName(resume, activeVersion?.company))}
             >
               <Download />
               {preview.building ? copy.editor.building : copy.editor.download}
@@ -242,13 +298,49 @@ export function EditorScreen({ state }: { state: ResumeState }) {
           profile={profile}
           atsMode={settings.atsMode}
           template={settings.template}
+          {...(activeVersion
+            ? {
+                initial: {
+                  role: activeVersion.role,
+                  company: activeVersion.company,
+                  recipient: activeVersion.letter?.recipient ?? '',
+                  body: activeVersion.letter?.body ?? BODY_PLACEHOLDER,
+                },
+                // The letter belongs to the posting, so it is saved with the version.
+                onChange: ({ role, company, recipient, body }) =>
+                  updateVersion(activeVersion.id, (version) => ({
+                    ...version,
+                    role,
+                    company,
+                    letter: { recipient, body },
+                  })),
+              }
+            : {})}
           onClose={() => setWritingLetter(false)}
+        />
+      ) : null}
+
+      {creatingVersion ? (
+        <NewVersionDialog
+          onCreate={(input) => {
+            state.addVersion(input)
+            setMessage(null)
+          }}
+          onClose={() => setCreatingVersion(false)}
+        />
+      ) : null}
+
+      {deletingVersion && activeVersion ? (
+        <DeleteVersionDialog
+          company={versionLabel(activeVersion)}
+          onConfirm={() => state.deleteVersion(activeVersion.id)}
+          onClose={() => setDeletingVersion(false)}
         />
       ) : null}
 
       {importing ? (
         <ImportDialog
-          current={resume}
+          current={base}
           onApply={(next) => {
             replaceAll(next)
             setMessage('Importamos lo que pudimos leer. Revisá el formulario y corregí lo que haga falta.')

@@ -40,10 +40,26 @@ export function contactParts(resume: Resume): string[] {
   )
 }
 
-export function fileName(resume: Resume): string {
-  const clean = resume.personal.fullName
+/** Letters, digits and hyphens: a name that survives every mail client and OS. */
+function slug(text: string): string {
+  return text
     .trim()
     .replace(/\s+/g, '-')
     .replace(/[^A-Za-zÁÉÍÓÚÜÑáéíóúüñ0-9-]/g, '')
-  return `${clean || 'CV'}-CV.pdf`
+    // "Pérez & Hijos" would leave "Pérez--Hijos" behind once the "&" is gone.
+    .replace(/-{2,}/g, '-')
+    .replace(/^-|-$/g, '')
+}
+
+/**
+ * `Ana-Gomez-CV.pdf`, or `Ana-Gomez-CV-Banco-Columbia.pdf` for a version.
+ *
+ * The company goes in the name because someone applying to five places ends up
+ * with five files in their downloads, and five identical names is how the
+ * wrong one gets attached.
+ */
+export function fileName(resume: Resume, company?: string, kind: 'CV' | 'Carta' = 'CV'): string {
+  const name = slug(resume.personal.fullName) || 'CV'
+  const target = company ? slug(company) : ''
+  return target ? `${name}-${kind}-${target}.pdf` : `${name}-${kind}.pdf`
 }

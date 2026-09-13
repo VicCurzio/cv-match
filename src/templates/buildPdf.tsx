@@ -46,8 +46,8 @@ export async function buildPdf(resume: Resume, options: BuildOptions): Promise<B
   return pdf(document).toBlob()
 }
 
-export function resumeFileName(resume: Resume): string {
-  return fileName(resume)
+export function resumeFileName(resume: Resume, company?: string): string {
+  return fileName(resume, company)
 }
 
 /**
@@ -66,6 +66,6 @@ export async function buildLetterPdf(
   ).toBlob()
 }
 
-export function letterFileName(resume: Resume): string {
-  return fileName(resume).replace(/-CV\.pdf$/, '-Carta.pdf')
+export function letterFileName(resume: Resume, company?: string): string {
+  return fileName(resume, company, 'Carta')
 }

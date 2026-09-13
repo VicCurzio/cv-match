@@ -8,8 +8,6 @@ import { z } from 'zod'
  * imported `.json` files and, later, whatever the PDF/DOCX parser produces.
  */
 
-export const RESUME_VERSION = 1
-
 /** Dates are `YYYY-MM`. A resume never needs a day, and a plain string cannot
  *  be shifted by a timezone the way a Date can. */
 export const yearMonth = z
