@@ -5,6 +5,13 @@ Versionado según [SemVer](https://semver.org/lang/es/).
 
 ## [No publicado]
 
+### Cambiado: la vista previa es la hoja, no el visor del navegador
+
+- **La vista previa dibuja las páginas del PDF directamente**, a lo ancho de la columna, sin la barra de herramientas ni la tira de miniaturas del visor del navegador. Un clic en la hoja la abre en grande. Se dibuja desde el mismo `Blob` que se descarga, así que lo que se ve sigue siendo exactamente el archivo que se manda.
+- Nítida en pantallas de alta densidad (se dibuja con los píxeles reales de la pantalla, con un tope para no pedir un lienzo que el navegador rechace) y sin parpadeo al editar: la página nueva se dibuja fuera de pantalla y se copia de una vez.
+- Si pdfjs no carga, vuelve el visor del navegador: la vista linda es una mejora, no el único camino.
+- pdfjs se carga desde un solo lugar, compartido con el importador.
+
 ### Agregado: comparar el CV con el aviso (probado en el navegador)
 
 - **La versión muestra qué palabras del aviso el CV no menciona**, y cuáles ya menciona. Se actualiza mientras se adapta el perfil o las viñetas. Es una lista para revisar, no un puntaje: un porcentaje invita a pegar palabras hasta que suba.

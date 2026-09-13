@@ -36,6 +36,10 @@ export const copy = {
     skills: 'Habilidades',
     languages: 'Idiomas',
     preview: 'Vista previa',
+    zoom: 'Ampliar',
+    openPage: (page: number, total: number) =>
+      total > 1 ? `Ver la página ${page} de ${total} en grande` : 'Ver el CV en grande',
+    pageCount: (total: number) => (total === 1 ? '1 página' : `${total} páginas`),
     download: 'Descargar PDF',
     exportJson: 'Guardar copia (.json)',
     importJson: 'Cargar copia (.json)',

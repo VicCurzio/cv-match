@@ -1,3 +1,4 @@
+import { loadPdfjs } from '@/shared/utils/pdfjs'
 import { detectFormat } from './detectFormat'
 
 export type ExtractResult =
@@ -92,11 +93,7 @@ export function joinRow(items: RowItem[]): string {
 }
 
 async function readPdf(file: File): Promise<string> {
-  const pdfjs = await import('pdfjs-dist')
-  // The worker must come from this same site. Loaded from a CDN it works in
-  // development and fails in production, which is the worst way to find out.
-  const workerUrl = (await import('pdfjs-dist/build/pdf.worker.min.mjs?url')).default
-  pdfjs.GlobalWorkerOptions.workerSrc = workerUrl
+  const pdfjs = await loadPdfjs()
 
   const task = pdfjs.getDocument({ data: await file.arrayBuffer() })
   const doc = await task.promise

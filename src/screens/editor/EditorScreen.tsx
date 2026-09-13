@@ -16,6 +16,7 @@ import { Notice } from '@/shared/ui/Card'
 import { copy } from '@/shared/config/copy'
 import { listOf } from '@/shared/utils/text'
 import { resumeFileName } from '@/templates/buildPdf'
+import { PdfLightbox, PdfPagePlaceholder, PdfPages, usePdfDocument } from './PdfPages'
 import { ResumeForm } from './ResumeForm'
 import { DeleteVersionDialog, NewVersionDialog } from './VersionDialogs'
 import { VersionForm } from './VersionForm'
@@ -40,6 +41,8 @@ export function EditorScreen({ state }: { state: ResumeState }) {
   )
 
   const preview = usePdfPreview(resume, buildOptions)
+  const pdf = usePdfDocument(preview.blob)
+  const [zoomedPage, setZoomedPage] = useState<number | null>(null)
 
   const findings = useMemo(
     () =>
@@ -273,10 +276,14 @@ export function EditorScreen({ state }: { state: ResumeState }) {
             />
           </div>
 
-          <div className="overflow-hidden rounded-card border border-border bg-muted">
+          <div className="max-h-[80vh] overflow-y-auto rounded-card border border-border bg-muted p-4">
             {preview.error ? (
-              <p className="p-4 text-sm text-severity-error">{preview.error}</p>
-            ) : preview.url ? (
+              <p className="text-sm text-severity-error">{preview.error}</p>
+            ) : pdf.doc ? (
+              <PdfPages doc={pdf.doc} onOpen={setZoomedPage} />
+            ) : pdf.failed && preview.url ? (
+              // Drawing the sheets is the nicer view, not the only one: if pdfjs
+              // cannot load, the browser's own viewer still shows the file.
               <iframe
                 key={preview.url}
                 src={preview.url}
@@ -284,7 +291,7 @@ export function EditorScreen({ state }: { state: ResumeState }) {
                 className="h-[720px] w-full border-0"
               />
             ) : (
-              <div className="h-[720px] w-full animate-pulse bg-muted" />
+              <PdfPagePlaceholder />
             )}
           </div>
 
@@ -318,6 +325,10 @@ export function EditorScreen({ state }: { state: ResumeState }) {
             : {})}
           onClose={() => setWritingLetter(false)}
         />
+      ) : null}
+
+      {zoomedPage !== null && pdf.doc ? (
+        <PdfLightbox doc={pdf.doc} startPage={zoomedPage} onClose={() => setZoomedPage(null)} />
       ) : null}
 
       {creatingVersion ? (
