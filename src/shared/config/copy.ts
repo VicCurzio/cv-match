@@ -61,6 +61,12 @@ export const copy = {
       'En este mercado estos datos no se exportan. Los dejamos acá para que puedas borrarlos si querés.',
   },
 
+  notFound: {
+    title: 'Esta página no existe',
+    body: 'Puede que el link esté mal escrito. Tu CV sigue guardado en este navegador.',
+    back: 'Ir al inicio',
+  },
+
   recovery: {
     unreadable:
       'Había un CV guardado en este navegador y no lo pudimos leer, así que la app arrancó en blanco. Bajate el archivo antes de seguir editando: es la única copia que queda.',

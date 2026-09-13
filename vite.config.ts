@@ -1,4 +1,6 @@
 /// <reference types="vitest/config" />
+import { copyFileSync } from 'node:fs'
+import { join } from 'node:path'
 import { fileURLToPath, URL } from 'node:url'
 import tailwindcss from '@tailwindcss/vite'
 import react from '@vitejs/plugin-react'
@@ -59,11 +61,36 @@ function contentSecurityPolicy(): Plugin {
   }
 }
 
+/**
+ * GitHub Pages has no rewrite rules: a request for /cv-match/editor finds no
+ * file and gets the site's 404.html. Making that file a copy of index.html is
+ * what lets the app load on any of its addresses, and the router takes it from
+ * there. `scripts/check-build.mjs` fails the deploy if the copy is missing.
+ */
+function spaFallback(): Plugin {
+  let outDir = 'dist'
+  return {
+    name: 'cv-match:spa-fallback',
+    apply: 'build',
+    configResolved(config) {
+      outDir = config.build.outDir
+    },
+    closeBundle() {
+      copyFileSync(join(outDir, 'index.html'), join(outDir, '404.html'))
+    },
+  }
+}
+
 // https://vite.dev/config/
 export default defineConfig({
-  // Relative base so the built site works from a project subpath (GitHub Pages).
-  base: './',
-  plugins: [react(), tailwindcss(), contentSecurityPolicy()],
+  /*
+   * Absolute, not relative. The app has real paths now (/editor, /editor/versions/…),
+   * and with `./` a reload on /cv-match/editor asks for
+   * /cv-match/editor/assets/index.js, which does not exist: the page loads with
+   * no script and stays blank. The value is the GitHub Pages project path.
+   */
+  base: '/cv-match/',
+  plugins: [react(), tailwindcss(), contentSecurityPolicy(), spaFallback()],
   resolve: {
     alias: { '@': fileURLToPath(new URL('./src', import.meta.url)) },
   },

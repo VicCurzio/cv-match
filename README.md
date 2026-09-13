@@ -31,7 +31,8 @@ npm run dev
 
 | Comando | Qué hace |
 |---|---|
-| `npm run dev` | Servidor de desarrollo |
+| `npm run dev` | Servidor de desarrollo, en `http://localhost:5173/cv-match/` |
+| `npm run check:build` | Verifica el build antes de publicar: `404.html` presente y rutas de los archivos bajo `/cv-match/` |
 | `npm run build` | Build de producción a `dist/` |
 | `npm test` | Tests del núcleo (Vitest) |
 | `npm run typecheck` | `tsc -b` |

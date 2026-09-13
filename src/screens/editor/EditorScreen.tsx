@@ -1,5 +1,6 @@
 import { Download, FileJson, FileUp, Mail, Plus, Trash2, Upload } from 'lucide-react'
 import { useMemo, useRef, useState } from 'react'
+import { useLocation, useNavigate } from 'react-router'
 import { runAnalysis } from '@/domain/analysis/runAnalysis'
 import { downloadBlob, downloadJson } from '@/domain/export/download'
 import { MARKET_PROFILES, forbiddenFields, type MarketId } from '@/domain/market/marketProfile'
@@ -11,6 +12,7 @@ import { versionLabel } from '@/domain/resume/versions'
 import { ImportDialog } from '@/screens/import/ImportDialog'
 import { LetterDialog } from '@/screens/letter/LetterDialog'
 import { ReviewPanel } from '@/screens/review/ReviewPanel'
+import { isRecord, paths, previewPageFrom } from '@/screens/routes'
 import { Button } from '@/shared/ui/Button'
 import { Notice } from '@/shared/ui/Card'
 import { copy } from '@/shared/config/copy'
@@ -25,7 +27,9 @@ import { usePdfPreview } from './usePdfPreview'
 export function EditorScreen({ state }: { state: ResumeState }) {
   const { resume, settings, setResume, setSettings, replaceAll, saveError } = state
   const { unreadable, dismissUnreadable } = state
-  const { base, versions, activeVersion, selectVersion, updateVersion } = state
+  const { base, versions, activeVersion, updateVersion } = state
+  const navigate = useNavigate()
+  const location = useLocation()
   const [message, setMessage] = useState<string | null>(null)
   const [importing, setImporting] = useState(false)
   const [writingLetter, setWritingLetter] = useState(false)
@@ -42,7 +46,15 @@ export function EditorScreen({ state }: { state: ResumeState }) {
 
   const preview = usePdfPreview(resume, buildOptions)
   const pdf = usePdfDocument(preview.blob)
-  const [zoomedPage, setZoomedPage] = useState<number | null>(null)
+  /*
+   * The enlarged preview is a history entry, not only a piece of state: on a
+   * phone the back gesture is how people close things, and without an entry it
+   * would leave the editor instead of closing the sheet.
+   */
+  const zoomedPage = previewPageFrom(location.state)
+  const openPreview = (page: number) =>
+    navigate(location.pathname, { state: { ...(isRecord(location.state) ? location.state : {}), previewPage: page } })
+  const closePreview = () => navigate(-1)
 
   const findings = useMemo(
     () =>
@@ -164,7 +176,7 @@ export function EditorScreen({ state }: { state: ResumeState }) {
           className="h-9 rounded-lg border border-border bg-card px-3 text-sm"
           value={activeVersion?.id ?? ''}
           onChange={(e) => {
-            selectVersion(e.target.value || null)
+            navigate(e.target.value ? paths.version(e.target.value) : paths.editor)
             setMessage(null)
           }}
         >
@@ -226,7 +238,7 @@ export function EditorScreen({ state }: { state: ResumeState }) {
               version={activeVersion}
               onChange={(change) => updateVersion(activeVersion.id, change)}
               onEditBase={() => {
-                selectVersion(null)
+                navigate(paths.editor)
                 setMessage(null)
               }}
             />
@@ -280,7 +292,7 @@ export function EditorScreen({ state }: { state: ResumeState }) {
             {preview.error ? (
               <p className="text-sm text-severity-error">{preview.error}</p>
             ) : pdf.doc ? (
-              <PdfPages doc={pdf.doc} onOpen={setZoomedPage} />
+              <PdfPages doc={pdf.doc} onOpen={openPreview} />
             ) : pdf.failed && preview.url ? (
               // Drawing the sheets is the nicer view, not the only one: if pdfjs
               // cannot load, the browser's own viewer still shows the file.
@@ -328,13 +340,13 @@ export function EditorScreen({ state }: { state: ResumeState }) {
       ) : null}
 
       {zoomedPage !== null && pdf.doc ? (
-        <PdfLightbox doc={pdf.doc} startPage={zoomedPage} onClose={() => setZoomedPage(null)} />
+        <PdfLightbox doc={pdf.doc} startPage={zoomedPage} onClose={closePreview} />
       ) : null}
 
       {creatingVersion ? (
         <NewVersionDialog
           onCreate={(input) => {
-            state.addVersion(input)
+            navigate(paths.version(state.addVersion(input)))
             setMessage(null)
           }}
           onClose={() => setCreatingVersion(false)}
@@ -344,7 +356,12 @@ export function EditorScreen({ state }: { state: ResumeState }) {
       {deletingVersion && activeVersion ? (
         <DeleteVersionDialog
           company={versionLabel(activeVersion)}
-          onConfirm={() => state.deleteVersion(activeVersion.id)}
+          onConfirm={() => {
+            // Leave the address first: a deleted version's URL would otherwise
+            // stay in the history as a step that leads nowhere.
+            navigate(paths.editor, { replace: true })
+            state.deleteVersion(activeVersion.id)
+          }}
           onClose={() => setDeletingVersion(false)}
         />
       ) : null}

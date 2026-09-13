@@ -25,6 +25,11 @@ export interface ResumeState {
   versions: Version[]
   /** `null` while the base itself is selected. */
   activeVersion: Version | null
+  /**
+   * The id last selected, saved with the document. Read by the start screen to
+   * reopen the version that was open; may name a version that no longer exists.
+   */
+  activeVersionId: string | null
   /** The settings of whatever is selected, base or version. */
   settings: Settings
   /** Set when a save failed, so the UI can say so instead of losing data quietly. */
@@ -43,14 +48,22 @@ export interface ResumeState {
   replaceAll: (resume: Resume) => void
   /** Replaces everything: an imported export, versions included. */
   replaceDocument: (doc: StoredDocument) => void
-  selectVersion: (id: string | null) => void
-  addVersion: (input: { company: string; role: string; posting?: string }) => void
+  /** Creates the version and returns its id, so the caller can navigate to it. */
+  addVersion: (input: { company: string; role: string; posting?: string }) => string
   updateVersion: (id: string, change: (version: Version) => Version) => void
   deleteVersion: (id: string) => void
   toDocument: () => StoredDocument
 }
 
-export function useResume(): ResumeState {
+/**
+ * @param selectedVersionId Which version the address selects: an id, `null`
+ * for the base, or `undefined` on a screen that selects nothing (the start
+ * screen), which leaves the saved selection alone so "seguir" can reopen it.
+ *
+ * The address is the source of truth for what is on screen. The hook follows
+ * it instead of holding a second copy that the back button would not move.
+ */
+export function useResume(selectedVersionId?: string | null): ResumeState {
   const [stored] = useState(() => loadDocument())
   const saved = stored.status === 'ok' ? stored.doc : null
 
@@ -60,8 +73,14 @@ export function useResume(): ResumeState {
   )
   const [versions, setVersions] = useState<Version[]>(() => saved?.versions ?? [])
   const [activeVersionId, setActiveVersionId] = useState<string | null>(
-    () => saved?.activeVersionId ?? null,
+    // `null` from the address means the base; only `undefined` defers to what was saved.
+    () => (selectedVersionId !== undefined ? selectedVersionId : (saved?.activeVersionId ?? null)),
   )
+  // Adjusted during render rather than in an effect, so the first paint after
+  // a navigation already shows the right version instead of flashing the old one.
+  if (selectedVersionId !== undefined && selectedVersionId !== activeVersionId) {
+    setActiveVersionId(selectedVersionId)
+  }
   // Either the document that just failed to parse, or one set aside on an
   // earlier visit and never claimed.
   const [unreadable, setUnreadable] = useState<string | null>(() =>
@@ -137,14 +156,13 @@ export function useResume(): ResumeState {
     (input: { company: string; role: string; posting?: string }) => {
       const version = createVersion({ ...input, id: newId('ver') }, settings)
       setVersions((current) => [...current, version])
-      setActiveVersionId(version.id)
+      return version.id
     },
     [settings],
   )
 
   const deleteVersion = useCallback((id: string) => {
     setVersions((current) => current.filter((version) => version.id !== id))
-    setActiveVersionId((current) => (current === id ? null : current))
   }, [])
 
   const dismissUnreadable = useCallback(() => {
@@ -157,6 +175,7 @@ export function useResume(): ResumeState {
     base,
     versions,
     activeVersion,
+    activeVersionId,
     settings,
     saveError,
     hasSaved: stored.status === 'ok',
@@ -166,7 +185,6 @@ export function useResume(): ResumeState {
     setSettings,
     replaceAll,
     replaceDocument,
-    selectVersion: setActiveVersionId,
     addVersion,
     updateVersion,
     deleteVersion,

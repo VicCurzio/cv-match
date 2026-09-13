@@ -5,6 +5,16 @@ Versionado según [SemVer](https://semver.org/lang/es/).
 
 ## [No publicado]
 
+### Agregado: rutas (probado en el build de producción)
+
+- **Atrás y Adelante del navegador funcionan.** Antes la app era una sola dirección: Atrás sacaba del sitio y recargar volvía al inicio. Rutas: `/`, `/editor`, `/editor/versions/:versionId` y un 404 con vuelta al inicio. Atrás también cierra la vista ampliada del CV.
+- La dirección de una versión usa su id aleatorio, nunca la empresa ni el puesto.
+- Sin CV guardado, `/editor` lleva al inicio; una versión que no existe lleva al CV base.
+
+### Arreglado
+
+- **`base` de Vite pasa de `./` a `/cv-match/`.** Con rutas reales, la base relativa hacía que recargar en `/cv-match/editor` pidiera los scripts en `/cv-match/editor/assets/` y la página quedara en blanco. El build copia `index.html` a `404.html` para que GitHub Pages sirva la app en cualquier dirección, y `npm run check:build` lo verifica en el deploy. En desarrollo la app queda en `localhost:5173/cv-match/`.
+
 ### Cambiado: la vista previa es la hoja, no el visor del navegador
 
 - **La vista previa dibuja las páginas del PDF directamente**, a lo ancho de la columna, sin la barra de herramientas ni la tira de miniaturas del visor del navegador. Un clic en la hoja la abre en grande. Se dibuja desde el mismo `Blob` que se descarga, así que lo que se ve sigue siendo exactamente el archivo que se manda.

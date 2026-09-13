@@ -28,6 +28,9 @@ jobs:
       # Nothing ships that has not passed the same checks as a local commit.
       - run: npm run verify
       - run: npm run build
+      # A missing 404.html or relative asset URLs only break on Pages, on every
+      # address but the home page. This is the one place that can catch it.
+      - run: npm run check:build
       - uses: actions/configure-pages@v6
       - uses: actions/upload-pages-artifact@v5
         with:
