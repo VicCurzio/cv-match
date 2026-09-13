@@ -78,8 +78,8 @@ El otro punto donde entra dato ajeno es el `.json` importado: se valida entero c
 
 ## Accesibilidad
 
-- Los tres diálogos comparten `shared/ui/Dialog`: cierran con Escape, contienen el foco mientras están abiertos y lo devuelven al botón que los abrió.
-- Los controles de archivo usan un `input` `sr-only`, nunca `display: none`. Un input oculto con `display: none` no recibe foco, así que el control existe para el mouse y no para el teclado.
+- Todos los diálogos comparten `shared/ui/Dialog`: cierran con Escape, contienen el foco mientras están abiertos y lo devuelven al botón que los abrió. La vista ampliada del CV además se cierra con el botón Atrás.
+- Los controles de archivo usan un `input` `sr-only` o un botón que abre el selector, nunca un `input` con `display: none` estilado al lado: ese no recibe foco, así que el control existe para el mouse y no para el teclado.
 - Los avisos que aparecen en reacción a algo son regiones vivas (`role="status"`).
 - La severidad de un hallazgo nunca se comunica solo con color: cada uno lleva ícono y etiqueta escrita.
 - `prefers-reduced-motion` apaga las transiciones, y hay un `:focus-visible` global.
@@ -133,6 +133,12 @@ Se testea el núcleo, no la interfaz:
 - El cruce de mercados: el mismo CV con foto pasa el perfil argentino y falla el internacional.
 - La validación del `.json` importado, y qué pasa con uno guardado que ya no se puede leer.
 - Un control que se verifica a sí mismo: un CV que el modo ATS **tiene** que rechazar.
+- Las versiones: base más capa, que un cambio del base llegue a todas, que la capa no tenga dónde guardar un hecho, y que una viñeta reescrita con un número distinto no se exporte.
+- La migración del documento guardado: uno de la versión 1 carga entero, y el esquema actual solo lo rechaza (así el test prueba la migración y no la tolerancia del esquema).
+- Comparar con el aviso, contra el texto de un aviso real.
+- Las direcciones y quién puede entrar al editor (`screens/routes.ts`), y el tamaño con que se dibuja cada hoja de la vista previa.
+
+Lo que solo existe en el sitio construido lo verifica `npm run check:build` en el deploy: el `404.html` y que ningún archivo del sitio se pida con ruta relativa.
 
 Tres de ellos vale la pena conocerlos antes de tocar lo que verifican:
 
@@ -144,8 +150,11 @@ Tres de ellos vale la pena conocerlos antes de tocar lo que verifican:
 
 ## Limitaciones conocidas
 
-- El bundle pesa alrededor de 1,5 MB sin comprimir, casi todo `@react-pdf/renderer`. Se puede recortar con carga diferida cuando moleste.
-- La foto se guarda en el navegador. El cupo total ronda los 5 MB, por eso se comprime a 400x400 antes de guardarla; sin eso una foto de celular llena el cupo y el navegador deja de guardar sin avisar.
+- El editor pesa alrededor de 450 KB comprimidos, casi todo `@react-pdf/renderer`. Se descarga recién al entrar al editor: la pantalla de inicio carga unos 110 KB.
+- La foto se guarda en el navegador. El cupo total ronda los 5 MB, por eso se comprime a 600x600 antes de guardarla; sin eso una foto de celular llena el cupo y el navegador deja de guardar sin avisar.
+- Hay un solo CV por navegador. "Empezar uno nuevo" reemplaza el guardado, después de confirmar y con la opción de bajar una copia. Guardar varios a la vez (el tuyo y el de otra persona) no está hecho.
+- Comparar con el aviso compara palabras, no significados: fuera de una lista corta de equivalencias ("ATM" y "cajero"), dos palabras distintas para lo mismo aparecen como faltante.
+- El control de números de las viñetas reescritas lee cifras escritas con dígitos. Un número escrito en letras ("treinta") no se detecta.
 - La fuente del PDF es una de las estándar del formato (Helvetica y Times-Roman). Cubren los acentos y la ñ sin embeber nada. Cambiar a una fuente propia obliga a registrarla con `Font.register`.
 - Importar un CV de dos columnas puede devolver el texto entremezclado: el PDF no guarda columnas, guarda posiciones. Un hueco horizontal ancho se lee como separador, lo que ayuda, pero no lo resuelve del todo. Por eso lo extraído siempre se muestra para revisar antes de aplicarse.
 - Un CV escaneado, o exportado como imagen desde una herramienta de diseño, no se puede importar. La app lo detecta y lo dice; los datos hay que cargarlos a mano.

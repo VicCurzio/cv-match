@@ -238,6 +238,17 @@ export function EditorScreen({ state }: { state: ResumeState }) {
         </Notice>
       ) : null}
 
+      {state.changedElsewhere ? (
+        <Notice tone="warning" live>
+          {copy.otherTab.changed}
+          <span className="mt-2 flex">
+            <Button size="sm" onClick={() => window.location.reload()}>
+              {copy.otherTab.reload}
+            </Button>
+          </span>
+        </Notice>
+      ) : null}
+
       {saveError ? <Notice tone="warning" live>{saveError}</Notice> : null}
       {message ? <Notice live>{message}</Notice> : null}
 

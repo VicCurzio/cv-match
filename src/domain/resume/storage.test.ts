@@ -3,8 +3,10 @@ import { cleanAr } from '@/test/fixtures'
 import { defaultSettings } from './settings'
 import {
   DOCUMENT_VERSION,
+  differsFrom,
   documentSchema,
   freshDocument,
+  isDocumentChange,
   loadDocument,
   parseResumeJson,
   type StoredDocument,
@@ -220,5 +222,60 @@ describe('starting a new resume', () => {
     const doc = freshDocument(settings)
     settings.atsMode = false
     expect(doc.settings.atsMode).toBe(true)
+  })
+})
+
+describe('a change from another tab', () => {
+  it('is recognised when it touches the saved document', () => {
+    expect(isDocumentChange('cv-match:document')).toBe(true)
+  })
+
+  it('counts storage being cleared altogether', () => {
+    expect(isDocumentChange(null)).toBe(true)
+  })
+
+  it('ignores other keys, like the set-aside unreadable copy', () => {
+    expect(isDocumentChange('cv-match:unreadable')).toBe(false)
+    expect(isDocumentChange('otra-app:algo')).toBe(false)
+  })
+})
+
+describe('whether another tab wrote something different', () => {
+  const settings = { market: 'AR' as const, atsMode: false, template: 'modern' as const }
+  const mine: StoredDocument = {
+    schemaVersion: DOCUMENT_VERSION,
+    settings,
+    activeLocale: 'es',
+    resumes: { es: cleanAr },
+    versions: [
+      {
+        ...createVersion({ id: 'ver-1', company: 'A', role: 'B' }, settings),
+      },
+    ],
+    activeVersionId: null,
+  }
+
+  it('the same content is not a change', () => {
+    expect(differsFrom(mine, JSON.stringify(mine))).toBe(false)
+  })
+
+  it('opening a version in the other tab is not a change', () => {
+    expect(differsFrom(mine, JSON.stringify({ ...mine, activeVersionId: 'ver-1' }))).toBe(false)
+  })
+
+  it('an edit is a change', () => {
+    const edited = { ...mine, resumes: { es: { ...cleanAr, summary: 'Otro perfil.' } } }
+    expect(differsFrom(mine, JSON.stringify(edited))).toBe(true)
+  })
+
+  it('an older document with the same content is not a change', () => {
+    const v1 = { schemaVersion: 1, settings, activeLocale: 'es', resumes: { es: cleanAr } }
+    expect(differsFrom({ ...mine, versions: [] }, JSON.stringify(v1))).toBe(false)
+  })
+
+  it('cleared storage, or text that is not a document, counts as a change', () => {
+    expect(differsFrom(mine, null)).toBe(true)
+    expect(differsFrom(mine, 'no es json')).toBe(true)
+    expect(differsFrom(mine, JSON.stringify({ hola: 'mundo' }))).toBe(true)
   })
 })

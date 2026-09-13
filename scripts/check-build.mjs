@@ -8,8 +8,11 @@
  *
  * 1. No `404.html`. Pages has no rewrite rules, so a reload on /cv-match/editor
  *    gets GitHub's own 404 page instead of the app.
- * 2. Relative asset URLs (`./assets/...`). On /cv-match/editor they resolve to
- *    /cv-match/editor/assets/..., which does not exist: a blank page.
+ * 2. Relative URLs to the site's own files (`./assets/...`, `./favicon.svg`).
+ *    On /cv-match/editor they resolve to /cv-match/editor/..., which does not
+ *    exist: a blank page for a script, a missing tab icon for the favicon.
+ *    Every local `src` and `href` is checked, not only scripts and styles --
+ *    checking only those let the favicon ship broken.
  *
  * `--self-test` feeds the checks a broken build and fails if they do not
  * notice. A clean run alone cannot tell a working check from a skipped one.
@@ -31,10 +34,12 @@ export function problemsIn(dir) {
   if (!existsSync(fallback)) problems.push('404.html is missing: a reload on any address but the home page breaks')
   else if (readFileSync(fallback, 'utf8') !== html) problems.push('404.html is not a copy of index.html')
 
-  const assets = [...html.matchAll(/(?:src|href)="([^"]+\.(?:js|css))"/g)].map((match) => match[1])
-  if (assets.length === 0) problems.push('index.html references no script or stylesheet')
-  for (const url of assets) {
-    if (!url.startsWith(BASE)) problems.push(`asset URL "${url}" does not start with ${BASE}`)
+  const urls = [...html.matchAll(/(?:src|href)="([^"]+)"/g)].map((match) => match[1])
+  // Other origins and in-page links are not the site's files.
+  const local = urls.filter((url) => !/^(?:[a-z]+:|\/\/|#)/i.test(url))
+  if (!local.some((url) => /\.js$/.test(url))) problems.push('index.html references no script')
+  for (const url of local) {
+    if (!url.startsWith(BASE)) problems.push(`URL "${url}" does not start with ${BASE}`)
   }
 
   return problems
@@ -43,15 +48,20 @@ export function problemsIn(dir) {
 function selfTest() {
   const dir = mkdtempSync(join(tmpdir(), 'check-build-'))
   try {
-    writeFileSync(join(dir, 'index.html'), '<script type="module" src="./assets/index.js"></script>')
+    writeFileSync(
+      join(dir, 'index.html'),
+      '<link rel="icon" href="./favicon.svg" /><script type="module" src="/cv-match/assets/index.js"></script>',
+    )
     const found = problemsIn(dir)
     const caughtFallback = found.some((p) => p.includes('404.html is missing'))
-    const caughtRelative = found.some((p) => p.includes('does not start with'))
+    // The script is fine here on purpose: only the favicon is wrong, which is
+    // the exact case the first version of this check let through.
+    const caughtRelative = found.some((p) => p.includes('"./favicon.svg"'))
     if (!caughtFallback || !caughtRelative) {
       console.error('check-build self-test FAILED: a broken build passed.', found)
       process.exit(1)
     }
-    console.log('check-build self-test passed: a build without 404.html and with relative assets is rejected.')
+    console.log('check-build self-test passed: a build without 404.html and with a relative favicon is rejected.')
   } finally {
     rmSync(dir, { recursive: true, force: true })
   }

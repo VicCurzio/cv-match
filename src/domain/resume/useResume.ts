@@ -4,7 +4,9 @@ import { defaultSettings, type Settings } from './settings'
 import {
   DOCUMENT_VERSION,
   clearBackup,
+  differsFrom,
   freshDocument,
+  isDocumentChange,
   loadDocument,
   readBackup,
   saveDocument,
@@ -35,6 +37,12 @@ export interface ResumeState {
   settings: Settings
   /** Set when a save failed, so the UI can say so instead of losing data quietly. */
   saveError: string | null
+  /**
+   * The saved resume was changed from another tab. Autosave stops here, and the
+   * UI asks to reload: this tab holds an older copy, and saving it would write
+   * over the newer one without a word.
+   */
+  changedElsewhere: boolean
   hasSaved: boolean
   /**
    * The raw text of a saved document that could not be read. The autosave is
@@ -101,6 +109,23 @@ export function useResume(selectedVersionId?: string | null): ResumeState {
     stored.status === 'unreadable' ? stored.raw : readBackup(),
   )
   const [saveError, setSaveError] = useState<string | null>(null)
+  const [changedElsewhere, setChangedElsewhere] = useState(false)
+
+  /*
+   * Two tabs on the same resume used to fight silently: each autosaves its own
+   * copy, so whichever wrote last erased what was done in the other -- a whole
+   * version gone because an old tab was still open behind. The browser tells
+   * every other tab when storage changes; this one listens and stands down.
+   */
+  const latest = useRef<(() => StoredDocument) | null>(null)
+  useEffect(() => {
+    const onStorage = (event: StorageEvent) => {
+      if (!isDocumentChange(event.key) || !latest.current) return
+      if (differsFrom(latest.current(), event.newValue)) setChangedElsewhere(true)
+    }
+    window.addEventListener('storage', onStorage)
+    return () => window.removeEventListener('storage', onStorage)
+  }, [])
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   // An id pointing at a deleted version selects the base rather than nothing.
@@ -121,10 +146,18 @@ export function useResume(selectedVersionId?: string | null): ResumeState {
     [base, baseSettings, versions, activeVersion],
   )
 
+  // Read by the storage listener, which is registered once and must compare
+  // against this tab's current copy rather than the one from its first render.
+  useEffect(() => {
+    latest.current = toDocument
+  }, [toDocument])
+
   // Debounced autosave: writing to storage on every keystroke is wasteful, and
   // a failure here is the one that loses work, so its result is surfaced.
   useEffect(() => {
     if (timer.current) clearTimeout(timer.current)
+    // An older copy must not be saved over a newer one from another tab.
+    if (changedElsewhere) return
     timer.current = setTimeout(() => {
       const result: SaveResult = saveDocument(toDocument())
       setSaveError(result.ok ? null : result.message)
@@ -133,7 +166,7 @@ export function useResume(selectedVersionId?: string | null): ResumeState {
     return () => {
       if (timer.current) clearTimeout(timer.current)
     }
-  }, [toDocument])
+  }, [toDocument, changedElsewhere])
 
   const setResume = useCallback((next: Resume | ((current: Resume) => Resume)) => {
     setBase((current) => (typeof next === 'function' ? next(current) : next))
@@ -201,6 +234,7 @@ export function useResume(selectedVersionId?: string | null): ResumeState {
     activeVersionId,
     settings,
     saveError,
+    changedElsewhere,
     hasSaved: stored.status === 'ok',
     unreadable,
     dismissUnreadable,

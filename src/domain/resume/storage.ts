@@ -12,6 +12,15 @@ import { versionSchema } from './versions'
 const STORAGE_KEY = 'cv-match:document'
 
 /**
+ * Whether a `storage` event is about the saved document. The browser fires it
+ * only in the OTHER tabs of the same site, never in the one that wrote, and with
+ * a `null` key when storage was cleared altogether -- which also counts.
+ */
+export function isDocumentChange(key: string | null): boolean {
+  return key === null || key === STORAGE_KEY
+}
+
+/**
  * Where an unreadable document is put aside before anything can overwrite it.
  *
  * A saved document that no longer parses -- a half-written record, or one from a
@@ -78,6 +87,29 @@ export function freshDocument(settings: Settings): StoredDocument {
     versions: [],
     activeVersionId: null,
   }
+}
+
+/**
+ * Whether a document written by another tab says something different from this
+ * tab's copy.
+ *
+ * Which version is open is left out: it is saved with the document, so just
+ * opening a version in one tab rewrites storage, and comparing it would tell
+ * every other tab "this resume changed elsewhere" when nobody had touched it.
+ * Text that is not a readable document counts as a change -- when in doubt,
+ * stop saving rather than write over it.
+ */
+export function differsFrom(current: StoredDocument, written: string | null): boolean {
+  if (written === null) return true
+  let other: StoredDocument | null
+  try {
+    other = upgradeDocument(JSON.parse(written))
+  } catch {
+    return true
+  }
+  if (!other) return true
+  const content = (doc: StoredDocument) => JSON.stringify({ ...doc, activeVersionId: null })
+  return content(other) !== content(current)
 }
 
 /**

@@ -5,6 +5,17 @@ Versionado según [SemVer](https://semver.org/lang/es/).
 
 ## [No publicado]
 
+### Arreglado (segunda revisión, probado en el build de producción)
+
+- **Dos pestañas abiertas se pisaban el CV.** Cada una guarda su copia sola, así que la que guardaba última borraba lo hecho en la otra, sin aviso. Ahora, si el CV cambia en otra pestaña, esta deja de guardar y pide recargar. Solo cuenta un cambio de contenido: abrir otra versión en la otra pestaña no dispara el aviso.
+- **El ícono de la pestaña no aparecía en ninguna página interna.** El favicon se pedía con ruta relativa y en `/cv-match/editor` daba 404 — el mismo problema que ya se había arreglado para los scripts. `check:build` solo revisaba scripts y estilos; ahora revisa todo archivo propio referenciado, y su autoprueba usa justo el caso del favicon.
+- Textos: la versión decía "titular" y el campo en pantalla se llama "Título".
+
+### Agregado
+
+- Metadatos para compartir el link (título, descripción y sitio al pegarlo en WhatsApp o LinkedIn) y un aviso para quien tenga JavaScript apagado.
+- README al día: el peso real de la carga, la foto a 600x600, las limitaciones nuevas (un CV por navegador, la comparación compara palabras, los números en letras no se detectan) y los tests nuevos.
+
 ### Agregado: empezar un CV nuevo (probado en el build de producción)
 
 - **Con un CV guardado, el inicio lo muestra arriba** — nombre y cuántas versiones tiene — con "Seguir con el CV guardado" como acción principal.

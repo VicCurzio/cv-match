@@ -79,6 +79,12 @@ export const copy = {
     back: 'Ir al inicio',
   },
 
+  otherTab: {
+    changed:
+      'Este CV se modificó en otra pestaña. Dejamos de guardar acá para no pisar esos cambios: recargá para seguir con la versión más nueva.',
+    reload: 'Recargar',
+  },
+
   recovery: {
     unreadable:
       'Había un CV guardado en este navegador y no lo pudimos leer, así que la app arrancó en blanco. Bajate el archivo antes de seguir editando: es la única copia que queda.',
@@ -103,7 +109,7 @@ export const copy = {
     remove: 'Borrar esta versión',
     newTitle: 'Nueva versión para un aviso',
     newSubtitle:
-      'Tu CV base no se toca. En la versión cambiás cómo lo contás para este puesto: titular, perfil, orden de habilidades y qué mostrar.',
+      'Tu CV base no se toca. En la versión cambiás cómo lo contás para este puesto: título, perfil, orden de habilidades y qué mostrar.',
     company: 'Empresa',
     role: 'Puesto',
     posting: 'Texto o link del aviso (opcional)',
@@ -112,7 +118,7 @@ export const copy = {
     cancel: 'Cancelar',
     removeTitle: 'Borrar la versión',
     removeBody: (company: string) =>
-      `Se borra la versión para ${company}: el titular y el perfil que escribiste para ese aviso, el orden de las habilidades, lo que ocultaste y su carta de presentación. Tus experiencias, estudios y datos siguen en el CV base.`,
+      `Se borra la versión para ${company}: el título y el perfil que escribiste para ese aviso, el orden de las habilidades, lo que ocultaste y su carta de presentación. Tus experiencias, estudios y datos siguen en el CV base.`,
     removeConfirm: 'Borrar versión',
     rule:
       'Una versión cambia cómo contás tu CV, no lo que dice. Puestos, fechas, números y datos de contacto se editan en el CV base, y el cambio llega a todas las versiones.',
