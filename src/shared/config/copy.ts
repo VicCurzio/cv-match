@@ -22,6 +22,18 @@ export const copy = {
     atsNoHint: 'PyMEs, comercios, contactos directos. Podés usar una plantilla con diseño.',
     begin: 'Empezar',
     resume: 'Seguir con el CV guardado',
+    savedTitle: 'Tenés un CV guardado en este navegador',
+    savedDetail: (name: string, versions: number) =>
+      `${name || 'Sin nombre todavía'}${versions > 0 ? ` · ${versions === 1 ? '1 versión' : `${versions} versiones`}` : ''}`,
+    newInstead: 'O respondé estas dos preguntas para empezar uno nuevo.',
+    beginNew: 'Empezar uno nuevo',
+    replaceTitle: 'Empezar un CV nuevo',
+    replaceBody: (name: string, versions: number) =>
+      `El CV guardado${name ? ` de ${name}` : ''}${versions > 0 ? ` y ${versions === 1 ? 'su versión' : `sus ${versions} versiones`}` : ''} se reemplaza en este navegador. Bajá una copia antes: después la podés volver a abrir con "Cargar copia (.json)".`,
+    backupAndBegin: 'Bajar copia y empezar',
+    beginWithoutBackup: 'Empezar sin copia',
+    cancel: 'Cancelar',
+    backupFileName: 'cv-match-copia.json',
   },
 
   editor: {

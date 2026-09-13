@@ -1,8 +1,9 @@
-import { ArrowRight, Building2, Globe2, Mail } from 'lucide-react'
+import { ArrowRight, Building2, Download, Globe2, Mail } from 'lucide-react'
 import { useState } from 'react'
 import { MARKET_PROFILES, type MarketId } from '@/domain/market/marketProfile'
 import type { Settings } from '@/domain/resume/storage'
 import { Card } from '@/shared/ui/Card'
+import { Dialog } from '@/shared/ui/Dialog'
 import { Button } from '@/shared/ui/Button'
 import { copy } from '@/shared/config/copy'
 import { cn } from '@/shared/utils/cn'
@@ -13,9 +14,12 @@ import { cn } from '@/shared/utils/cn'
  */
 
 interface Props {
-  hasSaved: boolean
+  /** The resume already in this browser, or `null` on a first visit. */
+  saved: { fullName: string; versions: number } | null
   onStart: (settings: Pick<Settings, 'market' | 'atsMode' | 'template'>) => void
   onResume: () => void
+  /** Downloads the saved document as a `.json` copy. */
+  onBackup: () => void
 }
 
 function Choice({
@@ -54,9 +58,27 @@ function Choice({
   )
 }
 
-export function StartScreen({ hasSaved, onStart, onResume }: Props) {
+export function StartScreen({ saved, onStart, onResume, onBackup }: Props) {
   const [market, setMarket] = useState<MarketId>('AR')
   const [atsMode, setAtsMode] = useState<boolean | null>(null)
+  const [confirming, setConfirming] = useState(false)
+
+  const answers = {
+    market,
+    atsMode: atsMode === true,
+    template: atsMode ? 'harvard' : 'modern',
+  } as const
+
+  /*
+   * With a resume saved, "Empezar" used to carry on with that same resume under
+   * the new answers: there was no way to start from zero -- to make a second
+   * person's resume after your own -- short of clearing browser data by hand.
+   * Starting over now replaces it, so it asks first and offers the copy.
+   */
+  function begin() {
+    if (saved) setConfirming(true)
+    else onStart(answers)
+  }
 
   return (
     <main className="mx-auto flex min-h-full max-w-2xl flex-col justify-center gap-8 px-6 py-16">
@@ -67,6 +89,23 @@ export function StartScreen({ hasSaved, onStart, onResume }: Props) {
         <h1 className="mt-2 text-3xl font-semibold tracking-tight">{copy.start.title}</h1>
         <p className="mt-2 text-sm text-muted-foreground">{copy.start.subtitle}</p>
       </header>
+
+      {saved ? (
+        <Card className="flex flex-wrap items-center justify-between gap-4 p-5">
+          <div>
+            <p className="text-sm font-medium">{copy.start.savedTitle}</p>
+            <p className="mt-0.5 text-sm text-muted-foreground">
+              {copy.start.savedDetail(saved.fullName, saved.versions)}
+            </p>
+          </div>
+          <Button variant="primary" onClick={onResume}>
+            {copy.start.resume}
+            <ArrowRight />
+          </Button>
+        </Card>
+      ) : null}
+
+      {saved ? <p className="text-sm text-muted-foreground">{copy.start.newInstead}</p> : null}
 
       <section className="flex flex-col gap-3">
         <h2 className="text-sm font-medium">{copy.start.marketQuestion}</h2>
@@ -103,26 +142,49 @@ export function StartScreen({ hasSaved, onStart, onResume }: Props) {
 
       <div className="flex flex-wrap items-center gap-3">
         <Button
-          variant="primary"
+          variant={saved ? 'secondary' : 'primary'}
           size="lg"
           disabled={atsMode === null}
-          onClick={() =>
-            onStart({
-              market,
-              atsMode: atsMode === true,
-              template: atsMode ? 'harvard' : 'modern',
-            })
-          }
+          onClick={begin}
         >
-          {copy.start.begin}
+          {saved ? copy.start.beginNew : copy.start.begin}
           <ArrowRight />
         </Button>
-        {hasSaved ? (
-          <Button variant="ghost" size="lg" onClick={onResume}>
-            {copy.start.resume}
-          </Button>
-        ) : null}
       </div>
+
+      {confirming && saved ? (
+        <Dialog
+          label={copy.start.replaceTitle}
+          onClose={() => setConfirming(false)}
+          className="max-w-md"
+          align="center"
+        >
+          <div className="flex flex-col gap-4 p-5">
+            <h2 className="text-base font-semibold">{copy.start.replaceTitle}</h2>
+            <p className="text-sm text-muted-foreground">
+              {copy.start.replaceBody(saved.fullName, saved.versions)}
+            </p>
+            <div className="flex flex-wrap gap-2">
+              <Button
+                variant="primary"
+                onClick={() => {
+                  onBackup()
+                  onStart(answers)
+                }}
+              >
+                <Download />
+                {copy.start.backupAndBegin}
+              </Button>
+              <Button variant="destructive" onClick={() => onStart(answers)}>
+                {copy.start.beginWithoutBackup}
+              </Button>
+              <Button variant="ghost" onClick={() => setConfirming(false)}>
+                {copy.start.cancel}
+              </Button>
+            </div>
+          </div>
+        </Dialog>
+      ) : null}
 
       <Card className="p-4">
         <p className="text-xs leading-relaxed text-muted-foreground">

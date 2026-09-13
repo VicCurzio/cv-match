@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { resumeSchema, type Resume } from './resumeSchema'
+import { emptyResume, resumeSchema, type Resume } from './resumeSchema'
 import { settingsSchema } from './settings'
 import { versionSchema } from './versions'
 
@@ -23,6 +23,7 @@ const STORAGE_KEY = 'cv-match:document'
 const BACKUP_KEY = 'cv-match:unreadable'
 
 export { defaultSettings, settingsSchema, type Settings } from './settings'
+import type { Settings } from './settings'
 
 /** The shape of what is saved. Bumped when that shape changes, never silently. */
 export const DOCUMENT_VERSION = 2
@@ -62,6 +63,22 @@ export const documentSchema = z.object({
 })
 
 export type StoredDocument = z.infer<typeof documentSchema>
+
+/**
+ * A new, empty document with the start screen's answers: what "Empezar uno
+ * nuevo" puts in place of whatever was saved. No resume, no versions, the base
+ * selected.
+ */
+export function freshDocument(settings: Settings): StoredDocument {
+  return {
+    schemaVersion: DOCUMENT_VERSION,
+    settings: { ...settings },
+    activeLocale: 'es',
+    resumes: { es: emptyResume() },
+    versions: [],
+    activeVersionId: null,
+  }
+}
 
 /**
  * Reads any document this app has ever written, upgraded to the current shape.

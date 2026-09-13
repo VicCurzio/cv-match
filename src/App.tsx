@@ -1,9 +1,11 @@
 import { Suspense, lazy, useState } from 'react'
 import { Navigate, Route, Routes, useMatch, useNavigate } from 'react-router'
+import { downloadJson } from '@/domain/export/download'
 import { useResume } from '@/domain/resume/useResume'
 import { NotFoundScreen } from '@/screens/not-found/NotFoundScreen'
 import { VERSION_ROUTE, editorAccess, paths, resumePath } from '@/screens/routes'
 import { StartScreen } from '@/screens/start/StartScreen'
+import { copy } from '@/shared/config/copy'
 
 /*
  * The editor is loaded when someone gets to it, not with the start screen. It
@@ -59,9 +61,17 @@ export default function App() {
           <StartScreen
             // Answered earlier in this visit counts: going back from the editor
             // must still offer to continue, not only to start over.
-            hasSaved={state.hasSaved || started}
+            saved={
+              state.hasSaved || started
+                ? { fullName: state.base.personal.fullName, versions: state.versions.length }
+                : null
+            }
+            onBackup={() => downloadJson(state.toDocument(), copy.start.backupFileName)}
             onStart={(settings) => {
-              state.setBaseSettings(settings)
+              // A first visit has nothing to replace. Otherwise the screen has
+              // already asked, and this is the confirmed start over.
+              if (state.hasSaved || started) state.startNew(settings)
+              else state.setBaseSettings(settings)
               setStarted(true)
               navigate(paths.editor)
             }}

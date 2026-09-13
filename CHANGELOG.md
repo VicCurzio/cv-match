@@ -5,6 +5,13 @@ Versionado según [SemVer](https://semver.org/lang/es/).
 
 ## [No publicado]
 
+### Agregado: empezar un CV nuevo (probado en el build de producción)
+
+- **Con un CV guardado, el inicio lo muestra arriba** — nombre y cuántas versiones tiene — con "Seguir con el CV guardado" como acción principal.
+- **"Empezar uno nuevo" arranca de cero de verdad.** Antes, "Empezar" seguía con el mismo CV bajo las respuestas nuevas, así que no había forma de hacer el CV de otra persona en el mismo navegador sin borrar datos a mano.
+- Como reemplaza lo guardado, **pregunta primero y ofrece bajar una copia**: "Bajar copia y empezar", "Empezar sin copia" o "Cancelar". La copia es el mismo `.json` que se vuelve a abrir con "Cargar copia".
+- En la primera visita no pregunta nada: no hay nada que reemplazar.
+
 ### Arreglado (revisión general, probado en el build de producción)
 
 - **"Empezar" le aplicaba las respuestas a una versión.** Con un CV guardado cuya última vista era una versión, el mercado y el filtro elegidos en el inicio cambiaban esa versión y dejaban el CV base como estaba. Ahora van al CV base.

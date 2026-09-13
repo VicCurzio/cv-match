@@ -4,6 +4,7 @@ import { defaultSettings, type Settings } from './settings'
 import {
   DOCUMENT_VERSION,
   clearBackup,
+  freshDocument,
   loadDocument,
   readBackup,
   saveDocument,
@@ -55,6 +56,12 @@ export interface ResumeState {
   replaceAll: (resume: Resume) => void
   /** Replaces everything: an imported export, versions included. */
   replaceDocument: (doc: StoredDocument) => void
+  /**
+   * Throws the saved resume and its versions away and starts an empty one with
+   * these settings. Destructive on purpose: the start screen asks first and
+   * offers a copy.
+   */
+  startNew: (settings: Settings) => void
   /** Creates the version and returns its id, so the caller can navigate to it. */
   addVersion: (input: { company: string; role: string; posting?: string }) => string
   updateVersion: (id: string, change: (version: Version) => Version) => void
@@ -163,6 +170,11 @@ export function useResume(selectedVersionId?: string | null): ResumeState {
     setActiveVersionId(doc.activeVersionId)
   }, [])
 
+  const startNew = useCallback(
+    (next: Settings) => replaceDocument(freshDocument(next)),
+    [replaceDocument],
+  )
+
   const addVersion = useCallback(
     (input: { company: string; role: string; posting?: string }) => {
       const version = createVersion({ ...input, id: newId('ver') }, settings)
@@ -197,6 +209,7 @@ export function useResume(selectedVersionId?: string | null): ResumeState {
     setBaseSettings: patchBaseSettings,
     replaceAll,
     replaceDocument,
+    startNew,
     addVersion,
     updateVersion,
     deleteVersion,

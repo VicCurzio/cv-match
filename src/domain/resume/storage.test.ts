@@ -4,6 +4,7 @@ import { defaultSettings } from './settings'
 import {
   DOCUMENT_VERSION,
   documentSchema,
+  freshDocument,
   loadDocument,
   parseResumeJson,
   type StoredDocument,
@@ -190,5 +191,34 @@ describe('versions survive export and import', () => {
   it('a bare resume imports as a base, with no document to replace the versions', () => {
     const result = parseResumeJson(JSON.stringify(cleanAr))
     expect(result.ok && result.document).toBeFalsy()
+  })
+})
+
+describe('starting a new resume', () => {
+  const answers = { market: 'INTL' as const, atsMode: true, template: 'harvard' as const }
+
+  it('is empty, has no versions and selects the base', () => {
+    const doc = freshDocument(answers)
+    expect(doc.resumes.es.personal.fullName).toBe('')
+    expect(doc.resumes.es.experience).toEqual([])
+    expect(doc.versions).toEqual([])
+    expect(doc.activeVersionId).toBeNull()
+  })
+
+  it('carries the start screen answers', () => {
+    expect(freshDocument(answers).settings).toEqual(answers)
+  })
+
+  it('is a document the app can save and read back', () => {
+    const doc = freshDocument(answers)
+    expect(documentSchema.safeParse(doc).success).toBe(true)
+    expect(parseResumeJson(JSON.stringify(doc))).toMatchObject({ ok: true, document: doc })
+  })
+
+  it('does not share the settings object it was given', () => {
+    const settings = { ...answers }
+    const doc = freshDocument(settings)
+    settings.atsMode = false
+    expect(doc.settings.atsMode).toBe(true)
   })
 })
