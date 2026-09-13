@@ -8,7 +8,13 @@ Instrucciones para agentes que modifiquen este código. Complemento del [README]
 npm run verify
 ```
 
-Encadena oxlint, `tsc -b`, la verificación de capas y los tests. Si eso pasa, el cambio está listo para probar en el navegador.
+Encadena oxlint, `tsc -b`, la verificación de capas y los tests. Si el cambio toca algo que una persona ve o recorre en el navegador, además:
+
+```bash
+npm run test:e2e
+```
+
+Playwright contra el build de producción. Un flujo nuevo (una pantalla, una ruta, un diálogo que guarda algo) lleva su escenario en `e2e/`, con datos sembrados desde `e2e/fixtures.ts` y nunca con el código de la app.
 
 ## Las cuatro cosas que no hay que romper
 

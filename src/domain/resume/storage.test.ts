@@ -6,6 +6,7 @@ import {
   differsFrom,
   documentSchema,
   freshDocument,
+  isBlankDocument,
   isDocumentChange,
   loadDocument,
   parseResumeJson,
@@ -277,5 +278,29 @@ describe('whether another tab wrote something different', () => {
     expect(differsFrom(mine, null)).toBe(true)
     expect(differsFrom(mine, 'no es json')).toBe(true)
     expect(differsFrom(mine, JSON.stringify({ hola: 'mundo' }))).toBe(true)
+  })
+})
+
+describe('a blank saved document', () => {
+  const answers = { market: 'AR' as const, atsMode: false, template: 'modern' as const }
+
+  it('is what a first look at the start screen leaves behind', () => {
+    expect(isBlankDocument(freshDocument(answers))).toBe(true)
+  })
+
+  it('stops being blank with a single character typed', () => {
+    const doc = freshDocument(answers)
+    const typed = { ...doc, resumes: { es: { ...doc.resumes.es, summary: 'A' } } }
+    expect(isBlankDocument(typed)).toBe(false)
+  })
+
+  it('a version alone is content', () => {
+    const doc = freshDocument(answers)
+    const withVersion = { ...doc, versions: [createVersion({ id: 'v', company: 'A', role: 'B' }, answers)] }
+    expect(isBlankDocument(withVersion)).toBe(false)
+  })
+
+  it('a full resume is not blank', () => {
+    expect(isBlankDocument({ ...freshDocument(answers), resumes: { es: cleanAr } })).toBe(false)
   })
 })

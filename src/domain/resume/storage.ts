@@ -74,6 +74,20 @@ export const documentSchema = z.object({
 export type StoredDocument = z.infer<typeof documentSchema>
 
 /**
+ * Whether a saved document holds nothing the person wrote.
+ *
+ * The autosave runs from the first render, so a first visit that only looked at
+ * the start screen leaves an empty document behind. Treating that as "a saved
+ * resume" greeted the next visit with "Tenés un CV guardado · Sin nombre
+ * todavía", and "Empezar uno nuevo" asked to confirm replacing nothing.
+ */
+export function isBlankDocument(doc: StoredDocument): boolean {
+  return (
+    doc.versions.length === 0 && JSON.stringify(doc.resumes.es) === JSON.stringify(emptyResume())
+  )
+}
+
+/**
  * A new, empty document with the start screen's answers: what "Empezar uno
  * nuevo" puts in place of whatever was saved. No resume, no versions, the base
  * selected.

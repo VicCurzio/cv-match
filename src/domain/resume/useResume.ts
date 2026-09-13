@@ -6,6 +6,7 @@ import {
   clearBackup,
   differsFrom,
   freshDocument,
+  isBlankDocument,
   isDocumentChange,
   loadDocument,
   readBackup,
@@ -43,6 +44,7 @@ export interface ResumeState {
    * over the newer one without a word.
    */
   changedElsewhere: boolean
+  /** A resume with something in it was saved before this visit. */
   hasSaved: boolean
   /**
    * The raw text of a saved document that could not be read. The autosave is
@@ -235,7 +237,8 @@ export function useResume(selectedVersionId?: string | null): ResumeState {
     settings,
     saveError,
     changedElsewhere,
-    hasSaved: stored.status === 'ok',
+    // An empty document left by an earlier look at the start screen is not a resume.
+    hasSaved: stored.status === 'ok' && !isBlankDocument(stored.doc),
     unreadable,
     dismissUnreadable,
     setResume,

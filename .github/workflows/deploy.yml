@@ -31,6 +31,17 @@ jobs:
       # A missing 404.html or relative asset URLs only break on Pages, on every
       # address but the home page. This is the one place that can catch it.
       - run: npm run check:build
+      # Nothing is published that fails in a real browser either.
+      - run: npx playwright install --with-deps chromium
+      # The flows a person goes through, in a real browser, against the production
+      # build: routes and Back, versions, the preview under the CSP, two tabs.
+      - run: npm run test:e2e
+      - uses: actions/upload-artifact@v7
+        if: failure()
+        with:
+          name: playwright-traces
+          path: test-results
+          retention-days: 7
       - uses: actions/configure-pages@v6
       - uses: actions/upload-pages-artifact@v5
         with:

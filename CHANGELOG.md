@@ -5,6 +5,16 @@ Versionado según [SemVer](https://semver.org/lang/es/).
 
 ## [No publicado]
 
+### Agregado: tests de punta a punta
+
+- **18 escenarios con Playwright**, en Chromium, contra el build de producción. Cubren inicio y botón Atrás, versiones (crear, recargar, borrar, id inexistente, nombre del PDF), la comparación con el aviso, las viñetas con números, el nivel de idioma, la vista previa dibujada bajo la política de seguridad, dos pestañas, empezar uno nuevo con copia, un CV guardado con el formato viejo y el ancho de un celular.
+- **Se probó que muerden:** con el arreglo de las pestañas y el del CV vacío rotos a propósito, fallan justo los dos tests que los cubren.
+- Corren en CI en cada push y el deploy no publica si fallan; ante un fallo, el trace queda como artefacto.
+
+### Arreglado
+
+- **La primera visita dejaba un "CV guardado" vacío.** El guardado automático corre desde el primer render, así que mirar el inicio y cerrar dejaba un documento vacío: la visita siguiente decía "Tenés un CV guardado · Sin nombre todavía" y "Empezar uno nuevo" pedía confirmar el reemplazo de nada. Apareció al diseñar cómo sembrar datos en los tests.
+
 ### Arreglado (segunda revisión, probado en el build de producción)
 
 - **Dos pestañas abiertas se pisaban el CV.** Cada una guarda su copia sola, así que la que guardaba última borraba lo hecho en la otra, sin aviso. Ahora, si el CV cambia en otra pestaña, esta deja de guardar y pide recargar. Solo cuenta un cambio de contenido: abrir otra versión en la otra pestaña no dispara el aviso.

@@ -32,6 +32,7 @@ npm run dev
 | Comando | Qué hace |
 |---|---|
 | `npm run dev` | Servidor de desarrollo, en `http://localhost:5173/cv-match/` |
+| `npm run test:e2e` | Tests de punta a punta con Playwright, contra el build de producción |
 | `npm run check:build` | Verifica el build antes de publicar: `404.html` presente y rutas de los archivos bajo `/cv-match/` |
 | `npm run build` | Build de producción a `dist/` |
 | `npm test` | Tests del núcleo (Vitest) |
@@ -139,6 +140,18 @@ Se testea el núcleo, no la interfaz:
 - Las direcciones y quién puede entrar al editor (`screens/routes.ts`), y el tamaño con que se dibuja cada hoja de la vista previa.
 
 Lo que solo existe en el sitio construido lo verifica `npm run check:build` en el deploy: el `404.html` y que ningún archivo del sitio se pida con ruta relativa.
+
+### De punta a punta
+
+```bash
+npm run test:e2e
+```
+
+Playwright con Chromium, contra el **build de producción** servido por `vite preview`, no contra el servidor de desarrollo: la política de seguridad, la ruta base y la carga diferida del editor solo existen construidos, y cada una rompió algo en este proyecto que en desarrollo no se veía. Cubre lo que una persona hace: responder el inicio y moverse con Atrás y Adelante, crear, recargar y borrar versiones, la comparación con el aviso y las viñetas con números, la vista previa dibujada y su vista ampliada, dos pestañas sobre el mismo CV, empezar uno nuevo con copia, un CV guardado con el formato viejo y el ancho de un celular.
+
+Los datos de prueba se escriben en `localStorage` antes del primer script de la página (`e2e/fixtures.ts`) y con la forma que guarda la app, sin usar su código: un documento armado con las mismas funciones que se están probando cambiaría junto con el bug.
+
+Corren en CI en cada push, y el deploy no publica si fallan. La primera vez en una máquina nueva: `npx playwright install chromium`.
 
 Tres de ellos vale la pena conocerlos antes de tocar lo que verifican:
 
