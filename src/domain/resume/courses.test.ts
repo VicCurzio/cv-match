@@ -91,3 +91,15 @@ describe('a resume saved before this section existed still loads', () => {
     expect(parsed.education).toEqual(cleanAr.education)
   })
 })
+
+describe('language abilities', () => {
+  it('a language saved before abilities existed still loads', () => {
+    const saved = { ...cleanAr, languages: [{ id: 'l', name: 'Inglés', level: 'B1' }] }
+    expect(resumeSchema.safeParse(saved).success).toBe(true)
+  })
+
+  it('rejects an ability the app does not know', () => {
+    const saved = { ...cleanAr, languages: [{ id: 'l', name: 'Inglés', level: 'B1', abilities: ['singing'] }] }
+    expect(resumeSchema.safeParse(saved).success).toBe(false)
+  })
+})

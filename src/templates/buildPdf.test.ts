@@ -411,3 +411,31 @@ describe('ATS mode forces the single-column template', () => {
     expect(ats.lines).toEqual(harvard.lines)
   })
 })
+
+describe('a qualified language level reaches the file', () => {
+  const readsEnglish = {
+    ...withPhoto,
+    languages: [
+      { id: 'es', name: 'Español', level: 'Nativo' },
+      { id: 'en', name: 'Inglés', level: 'A2', abilities: ['reading' as const, 'listening' as const] },
+    ],
+  }
+
+  for (const template of ['harvard', 'modern'] as const) {
+    it(`prints what the person can do in ${template}, and nothing more for the unqualified one`, async () => {
+      const blob = await buildPdf(readsEnglish, { profile: AR_PROFILE, atsMode: false, template })
+      const pdf = await readPdf(new Uint8Array(await blob.arrayBuffer()))
+
+      // The Modern sidebar is narrow, so the phrase can wrap: compare with the
+      // line breaks folded back into single spaces.
+      const text = pdf.text.replace(/\s+/g, ' ')
+      expect(text).toContain('A2, lectura y comprensión oral')
+      expect(text).toContain('Nativo')
+      expect(text).not.toMatch(/Nativo,/)
+      // Nothing of the new text is hyphenated across a line. A run that is only
+      // "-" is the bullet mark, not a split word.
+      const broken = pdf.lines.filter((line) => line.trim() !== '-' && /-$/.test(line.trim()))
+      expect(broken).toEqual([])
+    })
+  }
+})

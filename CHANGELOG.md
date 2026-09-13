@@ -5,6 +5,26 @@ Versionado según [SemVer](https://semver.org/lang/es/).
 
 ## [No publicado]
 
+### Agregado: comparar el CV con el aviso (probado en el navegador)
+
+- **La versión muestra qué palabras del aviso el CV no menciona**, y cuáles ya menciona. Se actualiza mientras se adapta el perfil o las viñetas. Es una lista para revisar, no un puntaje: un porcentaje invita a pegar palabras hasta que suba.
+- Sin IA y determinístico. Descarta las secciones de logística del aviso (zonas, cómo postularse, horarios), el vocabulario que comparten todos los avisos, los links, los mails y el nombre de la empresa. Pliega plurales, género, infinitivos y pretéritos para que "atender" y "atendí" coincidan, y tiene una lista corta de equivalencias ("ATM" y "cajero").
+- El límite está dicho en pantalla: compara palabras, no significados.
+
+### Agregado: reescribir viñetas por versión (probado en el navegador)
+
+- **Una versión puede contar las viñetas de un trabajo con otras palabras**, reordenarlas o sacar puntos. **No puede cambiar un número:** si la reescritura dice una cifra que el CV base no tiene, se guarda pero no se exporta, y el aviso nombra el número.
+- El control corre en cada lectura, no solo al escribir. Si el CV base corrige una cifra, la reescritura con la cifra vieja deja de aplicarse y la corrección llega a la versión.
+
+### Agregado: nivel de idioma calificado (probado en el navegador)
+
+- **Se puede marcar qué se hace con soltura en un idioma**: lectura, comprensión oral, conversación, escritura. En el CV sale `Inglés (A2, lectura y comprensión oral)`. Un nivel solo promete las cuatro cosas; esto deja decir lo que sí se sabe hacer sin exagerar.
+- El nivel sigue siendo texto libre, con sugerencias (Nativo, A1 a C2, Básico, Intermedio, Avanzado). Los idiomas guardados antes cargan igual.
+
+### Cambiado
+
+- Las actions de GitHub pasan a las versiones que corren en Node 24: `checkout@v7`, `setup-node@v7`, `configure-pages@v6`, `upload-pages-artifact@v5`, `deploy-pages@v5`. Las anteriores apuntaban a Node 20, deprecado.
+
 ### Agregado: versiones por postulación (probado en el navegador)
 
 - **Un CV base y una versión por aviso.** La versión es una capa, no una copia: guarda solo lo que cambia de cómo se cuenta el CV (titular, perfil, orden y ocultamiento de habilidades, qué experiencias, estudios y cursos se muestran, mercado y plantilla) y lee los hechos del base. Un error corregido una vez queda corregido en todas las versiones.

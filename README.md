@@ -13,7 +13,7 @@ La mayoría no sabe maquetar un CV, ni qué sacarle, ni que el CV que sirve en A
 1. **Lo maqueta.** Dos plantillas, cada una con un propósito declarado.
 2. **Lo adapta al mercado.** En Argentina la foto se usa; en Estados Unidos, Reino Unido y Canadá hay reclutadores que descartan los CV con foto para no exponerse a una acusación de discriminación. La app lo sabe y filtra en consecuencia.
 3. **Lo diagnostica.** Un motor de reglas señala qué está flojo y **qué hacer** al respecto.
-4. **Lo adapta a cada aviso.** Una versión por postulación cambia el titular, el perfil, el orden de las habilidades y qué se muestra, sin tocar los hechos: puestos, fechas y números viven una sola vez en el CV base, así que lo que se corrige ahí llega a todas las versiones.
+4. **Lo adapta a cada aviso.** Una versión por postulación cambia el titular, el perfil, el orden de las habilidades y qué se muestra, sin tocar los hechos: puestos, fechas y números viven una sola vez en el CV base, así que lo que se corrige ahí llega a todas las versiones. Cada versión muestra qué palabras del aviso el CV todavía no menciona, como lista para revisar y no como puntaje.
 
 ## Requisitos
 

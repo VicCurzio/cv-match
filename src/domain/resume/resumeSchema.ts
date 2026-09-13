@@ -67,10 +67,28 @@ export const courseItemSchema = z.object({
   detail: z.string().optional(),
 })
 
+/**
+ * What someone can actually do in a language, when it is less than everything.
+ *
+ * A level on its own promises all four. "B1" says the person gets by speaking
+ * and writing too, and an interview checks that in half a minute. Someone who
+ * reads and understands English but barely speaks it had two bad options -- a
+ * letter that overstates, or a lower letter that says nothing about the
+ * reading they do use at work. Naming the abilities is the honest third one.
+ */
+export const LANGUAGE_ABILITIES = ['reading', 'listening', 'speaking', 'writing'] as const
+
+export type LanguageAbility = (typeof LANGUAGE_ABILITIES)[number]
+
 export const languageItemSchema = z.object({
   id: z.string(),
   name: z.string(),
   level: z.string(),
+  /**
+   * Missing, empty or all four mean the same: the level is not qualified.
+   * Optional so every language saved before this field existed still loads.
+   */
+  abilities: z.array(z.enum(LANGUAGE_ABILITIES)).optional(),
 })
 
 /**

@@ -44,6 +44,10 @@ export const copy = {
     addEducation: 'Agregar formación',
     addCourse: 'Agregar curso',
     addLanguage: 'Agregar idioma',
+    languageAbilities: 'Qué hacés con soltura (opcional)',
+    languageAbilitiesHint:
+      'Un nivel solo promete las cuatro cosas. Si leés bien pero hablás poco, marcá lectura y comprensión: es más creíble y dice lo que sí sabés hacer.',
+    languagePreview: 'En el CV sale:',
     remove: 'Quitar',
     currentJob: 'Trabajo acá actualmente',
     personalData: 'Datos personales (opcionales)',
@@ -104,7 +108,27 @@ export const copy = {
     facts: 'Lo que el CV cuenta',
     factsHint: 'Elegí qué mostrar en esta versión. Para cambiar un dato, editalo en el CV base.',
     editBase: 'Editar en el CV base',
+    rewriteBullets: 'Reescribir para este aviso',
+    bulletsLabel: 'Qué hiciste, contado para este aviso (una línea por punto)',
+    bulletsHint:
+      'Podés cambiar las palabras, el orden y sacar puntos. Los números tienen que ser los mismos del CV base.',
+    bulletsBlocked: (added: string[]) =>
+      `No se usa todavía: ${added.length === 1 ? `el ${added[0]} no está` : `${added.join(', ')} no están`} en el CV base, y una versión no puede cambiar números. Mientras tanto se exportan las viñetas del CV base.`,
     empty: 'No cargaste nada en esta sección del CV base.',
+  },
+
+  posting: {
+    empty: 'Pegá el texto del aviso y te mostramos qué palabras pide que tu CV no menciona.',
+    nothing: 'No encontramos palabras para comparar en este texto.',
+    summary: (covered: number, total: number) =>
+      `Tu CV ya menciona ${covered} de las ${total} palabras que usa el aviso.`,
+    missing: 'El aviso nombra y tu CV no:',
+    missingHint:
+      'Sumalas solo si es verdad. Usá las palabras del aviso para contar lo que ya hiciste, en el perfil o el título de esta versión.',
+    allCovered: 'Tu CV menciona todas las palabras que usa el aviso.',
+    covered: 'Ya lo menciona:',
+    limit:
+      'Comparamos palabras, no significados: si el aviso dice una cosa con otra palabra, puede aparecer como faltante.',
   },
 
   letter: {

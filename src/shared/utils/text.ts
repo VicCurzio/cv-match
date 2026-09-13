@@ -116,3 +116,34 @@ export function looksUnprofessional(email: string): boolean {
   if (/(19|20)\d{2}/.test(clean)) return true
   return /(sexy|loco|loca|kitty|princes|bebe|gato|nena|nene|xx|666|420)/.test(clean)
 }
+
+/**
+ * The numbers a text states, normalised so the same figure written two ways
+ * compares equal: "1.500" and "1500" are one number, "56,5" is "56.5", and a
+ * range like "20-40" is two numbers.
+ */
+export function numbersIn(text: string): string[] {
+  return (text.match(/\d+(?:[.,]\d+)*/g) ?? []).map((raw) =>
+    /^\d{1,3}(?:[.,]\d{3})+$/.test(raw) ? raw.replace(/[.,]/g, '') : raw.replace(',', '.'),
+  )
+}
+
+/**
+ * Numbers the rewritten text states that the original does not, counted with
+ * repetition: a rewrite that turns one "20" into two has added one.
+ *
+ * Dropping a number is allowed -- saying less is not saying something false.
+ * Adding or changing one is not.
+ */
+export function addedNumbers(original: string, rewritten: string): string[] {
+  const available = new Map<string, number>()
+  for (const n of numbersIn(original)) available.set(n, (available.get(n) ?? 0) + 1)
+
+  const added: string[] = []
+  for (const n of numbersIn(rewritten)) {
+    const left = available.get(n) ?? 0
+    if (left > 0) available.set(n, left - 1)
+    else added.push(n)
+  }
+  return added
+}

@@ -1,4 +1,11 @@
-import type { ExperienceItem, Resume } from '@/domain/resume/resumeSchema'
+import {
+  LANGUAGE_ABILITIES,
+  type ExperienceItem,
+  type LanguageAbility,
+  type LanguageItem,
+  type Resume,
+} from '@/domain/resume/resumeSchema'
+import { listOf } from '@/shared/utils/text'
 
 /** Page geometry, shared by every template. A4 with 18 mm margins, in points. */
 export const PAGE = {
@@ -62,4 +69,28 @@ export function fileName(resume: Resume, company?: string, kind: 'CV' | 'Carta' 
   const name = slug(resume.personal.fullName) || 'CV'
   const target = company ? slug(company) : ''
   return target ? `${name}-${kind}-${target}.pdf` : `${name}-${kind}.pdf`
+}
+
+export const ABILITY_LABEL: Record<LanguageAbility, string> = {
+  reading: 'lectura',
+  listening: 'comprensión oral',
+  speaking: 'conversación',
+  writing: 'escritura',
+}
+
+/**
+ * `A2, lectura y comprensión oral`, or just `B2` when nothing is qualified.
+ *
+ * A comma and not a middle dot: react-pdf treats the dot as a break opportunity
+ * and draws a stray hyphen after it at the end of a line (see the Harvard tags).
+ *
+ * All four abilities marked says nothing a level does not already say, so it
+ * prints as the level alone rather than as a list that reads like padding.
+ */
+export function languageLevel(language: LanguageItem): string {
+  const level = language.level.trim()
+  const abilities = LANGUAGE_ABILITIES.filter((ability) => language.abilities?.includes(ability))
+  const qualified = abilities.length > 0 && abilities.length < LANGUAGE_ABILITIES.length
+  const detail = qualified ? listOf(abilities.map((ability) => ABILITY_LABEL[ability])) : ''
+  return [level, detail].filter(Boolean).join(', ')
 }

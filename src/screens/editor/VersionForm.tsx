@@ -1,9 +1,12 @@
 import { ArrowDown, ArrowUp, Pencil } from 'lucide-react'
 import type { ReactNode } from 'react'
-import type { Resume } from '@/domain/resume/resumeSchema'
+import type { ExperienceItem, Resume } from '@/domain/resume/resumeSchema'
 import {
   orderedSkills,
   patchOverrides,
+  bulletRewrite,
+  resolveVersion,
+  setBulletRewrite,
   toggleHidden,
   type Overrides,
   type Version,
@@ -12,7 +15,8 @@ import { Button } from '@/shared/ui/Button'
 import { Notice, Section } from '@/shared/ui/Card'
 import { TextAreaField, TextField } from '@/shared/ui/Field'
 import { copy } from '@/shared/config/copy'
-import { contactParts, formatRange, formatYearMonth } from '@/templates/shared/format'
+import { contactParts, formatRange, formatYearMonth, languageLevel } from '@/templates/shared/format'
+import { PostingMatch } from './PostingMatch'
 
 /**
  * The editor of a version: what may change, editable; what may not, visible.
@@ -74,6 +78,11 @@ export function VersionForm({ base, version, onChange, onEditBase }: Props) {
           onChange={(e) =>
             onChange((current) => ({ ...current, posting: e.target.value || undefined }))
           }
+        />
+        <PostingMatch
+          posting={version.posting ?? ''}
+          resume={resolveVersion(base, version)}
+          company={version.company}
         />
         <Notice>{copy.versions.rule}</Notice>
       </Section>
@@ -158,15 +167,11 @@ export function VersionForm({ base, version, onChange, onEditBase }: Props) {
               title={[item.role, item.company].filter(Boolean).join(' - ')}
               detail={formatRange(item)}
             >
-              {item.bullets.filter((bullet) => bullet.trim()).length > 0 ? (
-                <ul className="mt-1 list-disc pl-5 text-xs text-muted-foreground">
-                  {item.bullets
-                    .filter((bullet) => bullet.trim())
-                    .map((bullet, index) => (
-                      <li key={index}>{bullet}</li>
-                    ))}
-                </ul>
-              ) : null}
+              <BulletEditor
+                item={item}
+                version={version}
+                onChange={(bullets) => onChange((current) => setBulletRewrite(current, item.id, bullets))}
+              />
             </FactItem>
           ))}
         </FactGroup>
@@ -209,7 +214,11 @@ export function VersionForm({ base, version, onChange, onEditBase }: Props) {
         {base.languages.length > 0 ? (
           <FactGroup title={copy.editor.languages} empty={false}>
             <p className="text-sm">
-              {base.languages.map((language) => `${language.name} (${language.level})`).join(' · ')}
+              {base.languages
+                .map((language) =>
+                  languageLevel(language) ? `${language.name} (${languageLevel(language)})` : language.name,
+                )
+                .join(' · ')}
             </p>
           </FactGroup>
         ) : null}
@@ -254,24 +263,87 @@ function FactItem({
   detail: string
   children?: ReactNode
 }) {
+  // The label wraps only the checkbox and the title. Anything interactive in
+  // `children` -- the bullet editor -- must sit outside it, or clicking into the
+  // textarea would also toggle whether the job is shown.
   return (
-    <label
-      className={`flex gap-3 rounded-lg border border-border p-3 ${shown ? '' : 'opacity-60'}`}
-    >
-      <input
-        type="checkbox"
-        className="mt-1"
-        aria-label={`${copy.versions.show}: ${title}`}
-        checked={shown}
-        onChange={(e) => onToggle(e.target.checked)}
-      />
-      <span className="flex-1">
-        <span className="flex flex-wrap items-baseline justify-between gap-2">
+    <div className={`flex flex-col gap-2 rounded-lg border border-border p-3 ${shown ? '' : 'opacity-60'}`}>
+      <label className="flex gap-3">
+        <input
+          type="checkbox"
+          className="mt-1"
+          aria-label={`${copy.versions.show}: ${title}`}
+          checked={shown}
+          onChange={(e) => onToggle(e.target.checked)}
+        />
+        <span className="flex flex-1 flex-wrap items-baseline justify-between gap-2">
           <span className={`text-sm font-medium ${shown ? '' : 'line-through'}`}>{title}</span>
           {detail ? <span className="text-xs text-muted-foreground">{detail}</span> : null}
         </span>
-        {children}
-      </span>
-    </label>
+      </label>
+      {children ? <div className="pl-7">{children}</div> : null}
+    </div>
+  )
+}
+
+/**
+ * A job's bullets, and the way to reword them for this posting.
+ *
+ * The base bullets show until the person asks to rewrite; the textarea then
+ * starts from them, so the numbers are already there to keep. A rewrite that
+ * states a number the base does not is kept -- the text is not thrown away --
+ * but it is not exported, and the notice names the number.
+ */
+function BulletEditor({
+  item,
+  version,
+  onChange,
+}: {
+  item: ExperienceItem
+  version: Version
+  onChange: (bullets: string[] | undefined) => void
+}) {
+  const rewrite = bulletRewrite(item, version)
+  const baseBullets = item.bullets.filter((bullet) => bullet.trim())
+
+  if (rewrite.status === 'none') {
+    return (
+      <div className="flex flex-col gap-2">
+        {baseBullets.length > 0 ? (
+          <ul className="list-disc pl-5 text-xs text-muted-foreground">
+            {baseBullets.map((bullet, index) => (
+              <li key={index}>{bullet}</li>
+            ))}
+          </ul>
+        ) : null}
+        {baseBullets.length > 0 ? (
+          <div>
+            <Button variant="ghost" size="sm" onClick={() => onChange(baseBullets)}>
+              <Pencil />
+              {copy.versions.rewriteBullets}
+            </Button>
+          </div>
+        ) : null}
+      </div>
+    )
+  }
+
+  const text = (version.overrides.bullets?.[item.id] ?? []).join('\n')
+
+  return (
+    <div className="flex flex-col gap-2">
+      <TextAreaField
+        label={copy.versions.bulletsLabel}
+        hint={copy.versions.bulletsHint}
+        value={text}
+        onChange={(e) => onChange(e.target.value.split('\n'))}
+      />
+      {rewrite.status === 'blocked' ? (
+        <Notice tone="warning" live>
+          {copy.versions.bulletsBlocked(rewrite.added)}
+        </Notice>
+      ) : null}
+      <OverrideStatus changed onReset={() => onChange(undefined)} />
+    </div>
   )
 }

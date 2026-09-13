@@ -3,11 +3,13 @@ import { cleanAr } from '@/test/fixtures'
 import type { Resume } from './resumeSchema'
 import { defaultSettings } from './settings'
 import {
+  bulletRewrite,
   createVersion,
   orderedSkills,
   overridesSchema,
   patchOverrides,
   resolveVersion,
+  setBulletRewrite,
   toggleHidden,
   versionSchema,
   type Version,
@@ -170,5 +172,62 @@ describe('creating and toggling', () => {
   it('shows and hides an item without duplicating ids', () => {
     expect(toggleHidden(['a'], 'a', false)).toEqual(['a'])
     expect(toggleHidden(['a', 'b'], 'a', true)).toEqual(['b'])
+  })
+})
+
+/**
+ * Rewording bullets per posting: the one override that sits next to numbers.
+ * The rule is that a version may say less or say it differently, never a
+ * different figure -- and that has to hold even when the base changes later.
+ */
+describe('a version may reword bullets but not change their numbers', () => {
+  const job = cleanAr.experience[0]!
+  const rewritten = [
+    'Bajé 30% la mora del canal minorista en 8 meses.',
+    'Llevé 180 cuentas corrientes con cierre mensual sin diferencias.',
+  ]
+
+  it('applies a rewrite that keeps the numbers, even reordered and shorter', () => {
+    const version = setBulletRewrite(versionFor(), job.id, rewritten)
+    expect(bulletRewrite(job, version)).toEqual({ status: 'applied', bullets: rewritten })
+    expect(resolveVersion(cleanAr, version).experience[0]!.bullets).toEqual(rewritten)
+  })
+
+  it('blocks a rewrite that changes a number, and exports the base instead', () => {
+    const version = setBulletRewrite(versionFor(), job.id, ['Bajé 45% la mora del canal minorista.'])
+    expect(bulletRewrite(job, version)).toEqual({ status: 'blocked', added: ['45'] })
+    expect(resolveVersion(cleanAr, version).experience[0]!.bullets).toEqual(job.bullets)
+  })
+
+  it('keeps the blocked text stored, so the person does not lose what they typed', () => {
+    const version = setBulletRewrite(versionFor(), job.id, ['Bajé 45% la mora.'])
+    expect(version.overrides.bullets?.[job.id]).toEqual(['Bajé 45% la mora.'])
+  })
+
+  it('a correction in the base switches off a rewrite that still says the old number', () => {
+    const version = setBulletRewrite(versionFor(), job.id, rewritten)
+    const corrected: Resume = {
+      ...cleanAr,
+      experience: [{ ...job, bullets: job.bullets.map((b) => b.replace('30%', '25%')) }],
+    }
+    const resolved = resolveVersion(corrected, version)
+    expect(resolved.experience[0]!.bullets.join(' ')).toContain('25%')
+    expect(resolved.experience[0]!.bullets.join(' ')).not.toContain('30%')
+  })
+
+  it('removing the rewrite goes back to the base', () => {
+    const version = setBulletRewrite(setBulletRewrite(versionFor(), job.id, rewritten), job.id, undefined)
+    expect('bullets' in version.overrides).toBe(false)
+    expect(bulletRewrite(job, version)).toEqual({ status: 'none' })
+  })
+
+  it('a rewrite for a job no longer in the base is ignored', () => {
+    const version = setBulletRewrite(versionFor(), 'exp-gone', ['Algo con 99 números.'])
+    expect(resolveVersion(cleanAr, version).experience).toEqual(cleanAr.experience)
+  })
+
+  it('the layer accepts rewritten bullets and still rejects facts', () => {
+    expect(overridesSchema.safeParse({ bullets: { 'exp-1': ['x'] } }).success).toBe(true)
+    expect(overridesSchema.safeParse({ bullets: { 'exp-1': ['x'] }, startDate: '2020-01' }).success).toBe(false)
   })
 })

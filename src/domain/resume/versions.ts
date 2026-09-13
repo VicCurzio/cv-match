@@ -1,5 +1,6 @@
 import { z } from 'zod'
-import type { Resume } from './resumeSchema'
+import { addedNumbers } from '@/shared/utils/text'
+import type { ExperienceItem, Resume } from './resumeSchema'
 import { settingsSchema, type Settings } from './settings'
 
 /**
@@ -14,9 +15,10 @@ import { settingsSchema, type Settings } from './settings'
 /**
  * What a version may change. Strict on purpose, and this is the product rule
  * living in code rather than in a promise: there is no key here for a job title,
- * a date, a number or a contact detail, and an object carrying one is rejected.
- * No screen written later can store a version that says something the base
- * does not, because there is nowhere to put it.
+ * a date or a contact detail, and an object carrying one is rejected. No screen
+ * written later can store a version that says something the base does not,
+ * because there is nowhere to put it. The one field that holds numbers -- the
+ * rewritten bullets -- is checked against the base on every read instead.
  *
  * Adapting a resume to a posting is telling it differently, never telling
  * something else.
@@ -32,6 +34,14 @@ export const overridesSchema = z.strictObject({
    */
   skillOrder: z.array(z.string()).optional(),
   hiddenSkills: z.array(z.string()).default([]),
+  /**
+   * Bullets rewritten for this posting, by experience id. The one override that
+   * sits next to facts: a bullet carries numbers, and a version may not change
+   * a number. So a rewrite is only ever APPLIED when every number it states is
+   * in the base bullets -- see `bulletRewrite`. It is stored either way, so
+   * the person does not lose their text while they fix it.
+   */
+  bullets: z.record(z.string(), z.array(z.string())).optional(),
   hiddenExperience: z.array(z.string()).default([]),
   hiddenEducation: z.array(z.string()).default([]),
   hiddenCourses: z.array(z.string()).default([]),
@@ -105,6 +115,35 @@ export function orderedSkills(base: string[], order: string[] | undefined): stri
   ]
 }
 
+export type BulletRewrite =
+  | { status: 'none' }
+  | { status: 'applied'; bullets: string[] }
+  /** Stored but not exported: it states numbers the base does not. */
+  | { status: 'blocked'; added: string[] }
+
+/**
+ * Whether this version's rewrite of a job's bullets can be used.
+ *
+ * Checked on every read, never only when it is typed. If the base is corrected
+ * later -- "30%" turns out to have been "25%" -- a rewrite that still says 30
+ * stops applying at once, and the correction reaches the version like every
+ * other fact does, instead of being overridden by an old copy of the mistake.
+ */
+export function bulletRewrite(item: ExperienceItem, version: Version): BulletRewrite {
+  const rewrite = version.overrides.bullets?.[item.id]
+  if (!rewrite) return { status: 'none' }
+  const added = addedNumbers(item.bullets.join('\n'), rewrite.join('\n'))
+  return added.length > 0 ? { status: 'blocked', added } : { status: 'applied', bullets: rewrite }
+}
+
+/** Sets or, with `undefined`, removes the rewrite of one job's bullets. */
+export function setBulletRewrite(version: Version, itemId: string, bullets: string[] | undefined): Version {
+  const next = { ...version.overrides.bullets }
+  if (bullets === undefined) delete next[itemId]
+  else next[itemId] = bullets
+  return patchOverrides(version, { bullets: Object.keys(next).length > 0 ? next : undefined })
+}
+
 /**
  * Base plus layer: the resume that is previewed, analysed and exported.
  *
@@ -112,8 +151,9 @@ export function orderedSkills(base: string[], order: string[] | undefined): stri
  * `Resume` and never learn that versions exist -- the same shape as
  * `applyProfile` for the market.
  *
- * Every rule here fails towards showing: an item added to the base appears, a
- * hidden id that no longer exists is ignored, and a renamed skill comes back.
+ * Every rule here fails towards the base: an item added to the base appears, a
+ * hidden id that no longer exists is ignored, a renamed skill comes back, and a
+ * bullet rewrite that states a number the base does not is not used.
  */
 export function resolveVersion(base: Resume, version: Version | null): Resume {
   if (!version) return base
@@ -126,7 +166,11 @@ export function resolveVersion(base: Resume, version: Version | null): Resume {
     ...base,
     personal: { ...base.personal, headline: layer.headline ?? base.personal.headline },
     summary: layer.summary ?? base.summary,
-    experience: without(base.experience, layer.hiddenExperience),
+    experience: without(base.experience, layer.hiddenExperience).map((item) => {
+      const rewrite = bulletRewrite(item, version)
+      // A blocked rewrite falls back to the base: the facts win.
+      return rewrite.status === 'applied' ? { ...item, bullets: rewrite.bullets } : item
+    }),
     education: without(base.education, layer.hiddenEducation),
     courses: without(base.courses, layer.hiddenCourses),
     skills: orderedSkills(base.skills, layer.skillOrder).filter(

@@ -3,6 +3,7 @@ import { useState } from 'react'
 import type { MarketProfile } from '@/domain/market/marketProfile'
 import { PhotoDialog } from './PhotoDialog'
 import {
+  LANGUAGE_ABILITIES,
   RESTRICTABLE_FIELDS,
   type CourseItem,
   type EducationItem,
@@ -16,6 +17,7 @@ import { Button } from '@/shared/ui/Button'
 import { Section, Notice } from '@/shared/ui/Card'
 import { SelectField, TextAreaField, TextField } from '@/shared/ui/Field'
 import { copy } from '@/shared/config/copy'
+import { ABILITY_LABEL, languageLevel } from '@/templates/shared/format'
 
 /** The restrictable fields that are text inputs. The photo has its own control. */
 type PersonalDataField = Exclude<RestrictableField, 'photo'>
@@ -33,6 +35,13 @@ const PERSONAL_DATA_INPUTS: Record<PersonalDataField, { label: string; type?: st
   maritalStatus: { label: 'Estado civil' },
   nationality: { label: 'Nacionalidad' },
 }
+
+/**
+ * Offered, not imposed: the field stays free text, because "Nativo" and
+ * "Intermedio" are what most local resumes say and the European letters are
+ * what multinationals ask for.
+ */
+const LANGUAGE_LEVEL_SUGGESTIONS = ['Nativo', 'A1', 'A2', 'B1', 'B2', 'C1', 'C2', 'Básico', 'Intermedio', 'Avanzado']
 
 const PERSONAL_DATA_FIELDS = RESTRICTABLE_FIELDS.filter(
   (field): field is PersonalDataField => field !== 'photo',
@@ -497,27 +506,66 @@ export function ResumeForm({ resume, profile, atsMode, onChange, onPhotoError }:
           </Button>
         }
       >
+        <datalist id="language-levels">
+          {LANGUAGE_LEVEL_SUGGESTIONS.map((level) => (
+            <option key={level} value={level} />
+          ))}
+        </datalist>
         {resume.languages.map((item, index) => (
-          <div key={item.id} className="grid gap-3 sm:grid-cols-[1fr_1fr_auto] sm:items-end">
-            <TextField
-              label="Idioma"
-              value={item.name}
-              onChange={(e) => patchLanguage(index, { name: e.target.value })}
-            />
-            <TextField
-              label="Nivel"
-              placeholder="Nativo, Intermedio, Básico"
-              value={item.level}
-              onChange={(e) => patchLanguage(index, { level: e.target.value })}
-            />
-            <Button
-              variant="ghost"
-              size="icon"
-              aria-label={`${copy.editor.remove} ${item.name}`}
-              onClick={() => removeLanguage(index)}
-            >
-              <Trash2 />
-            </Button>
+          <div key={item.id} className="flex flex-col gap-3 rounded-lg border border-border p-4">
+            <div className="grid gap-3 sm:grid-cols-[1fr_1fr_auto] sm:items-end">
+              <TextField
+                label="Idioma"
+                value={item.name}
+                onChange={(e) => patchLanguage(index, { name: e.target.value })}
+              />
+              <TextField
+                label="Nivel"
+                placeholder="Nativo, B2, Intermedio"
+                list="language-levels"
+                value={item.level}
+                onChange={(e) => patchLanguage(index, { level: e.target.value })}
+              />
+              <Button
+                variant="ghost"
+                size="icon"
+                aria-label={`${copy.editor.remove} ${item.name}`}
+                onClick={() => removeLanguage(index)}
+              >
+                <Trash2 />
+              </Button>
+            </div>
+
+            <fieldset className="flex flex-col gap-2">
+              <legend className="text-xs font-medium text-muted-foreground">
+                {copy.editor.languageAbilities}
+              </legend>
+              <div className="flex flex-wrap gap-x-4 gap-y-2">
+                {LANGUAGE_ABILITIES.map((ability) => (
+                  <label key={ability} className="flex items-center gap-2 text-sm">
+                    <input
+                      type="checkbox"
+                      checked={item.abilities?.includes(ability) ?? false}
+                      onChange={(e) =>
+                        patchLanguage(index, {
+                          abilities: e.target.checked
+                            ? [...(item.abilities ?? []), ability]
+                            : (item.abilities ?? []).filter((a) => a !== ability),
+                        })
+                      }
+                    />
+                    {ABILITY_LABEL[ability]}
+                  </label>
+                ))}
+              </div>
+              <p className="text-xs text-muted-foreground">{copy.editor.languageAbilitiesHint}</p>
+              {languageLevel(item) ? (
+                <p className="text-xs">
+                  {copy.editor.languagePreview}{' '}
+                  <span className="font-medium">{`${item.name || 'Idioma'} (${languageLevel(item)})`}</span>
+                </p>
+              ) : null}
+            </fieldset>
           </div>
         ))}
       </Section>

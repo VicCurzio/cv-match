@@ -1,7 +1,7 @@
 import { Children } from 'react'
 import { Document, Image, Page, StyleSheet, Text, View } from '@react-pdf/renderer'
 import type { Resume } from '@/domain/resume/resumeSchema'
-import { PAGE, formatRange, formatYearMonth } from '@/templates/shared/format'
+import { PAGE, formatRange, formatYearMonth, languageLevel } from '@/templates/shared/format'
 
 /**
  * The template for when a person reads the resume: a mail to a small company, a
@@ -169,7 +169,7 @@ export function ModernResume({ resume }: Props) {
               <Text style={styles.sideTitle}>IDIOMAS</Text>
               {resume.languages.map((language) => (
                 <Text key={language.id} style={styles.sideItem}>
-                  {language.name} - {language.level}
+                  {languageLevel(language) ? `${language.name} - ${languageLevel(language)}` : language.name}
                 </Text>
               ))}
             </>

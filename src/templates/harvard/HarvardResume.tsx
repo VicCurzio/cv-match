@@ -1,7 +1,13 @@
 import { Children } from 'react'
 import { Document, Page, StyleSheet, Text, View } from '@react-pdf/renderer'
 import type { Resume } from '@/domain/resume/resumeSchema'
-import { PAGE, contactParts, formatRange, formatYearMonth } from '@/templates/shared/format'
+import {
+  PAGE,
+  contactParts,
+  formatRange,
+  formatYearMonth,
+  languageLevel,
+} from '@/templates/shared/format'
 
 /**
  * The ATS-safe template.
@@ -251,7 +257,7 @@ export function HarvardResume({ resume }: Props) {
                     ]
                   : []),
                 <Text key={language.id} style={styles.tag}>
-                  {`${language.name} (${language.level})`}
+                  {languageLevel(language) ? `${language.name} (${languageLevel(language)})` : language.name}
                 </Text>,
               ])}
             </View>
