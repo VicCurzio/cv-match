@@ -15,7 +15,7 @@ La mayoría no sabe maquetar un CV, ni qué sacarle, ni que el CV que sirve en A
 3. **Lo diagnostica.** Un motor de reglas señala qué está flojo y **qué hacer** al respecto.
 4. **Guarda varios CV a la vez.** El tuyo y el de un familiar, cada uno con sus versiones y sus cartas, en el mismo navegador.
 5. **Lo adapta a cada aviso.** Una versión por postulación cambia el titular, el perfil, el orden de las habilidades y qué se muestra, sin tocar los hechos: puestos, fechas y números viven una sola vez en el CV base, así que lo que se corrige ahí llega a todas las versiones. Cada versión muestra qué palabras del aviso el CV todavía no menciona, como lista para revisar y no como puntaje.
-6. **Lo pasa al inglés.** Con el traductor que trae el navegador, en la misma computadora. El resultado es un borrador para revisar campo por campo, con el español al lado; las fechas, empresas y datos de contacto no se traducen: salen del CV en español.
+6. **Lo pasa al inglés, con su carta.** Con el traductor que trae el navegador, en la misma computadora. El resultado es un borrador para revisar campo por campo, con el español al lado; las fechas, empresas y datos de contacto no se traducen: salen del CV en español. La carta de presentación también sale en inglés, guardada aparte de la española.
 
 ## Requisitos
 
@@ -128,6 +128,8 @@ Y se autoverifica: `--self-test` le da un import que **tiene** que rechazar y fa
 
 Eso también decide cómo funciona la **carta de presentación**: la estructura y los datos que ya están en el CV se completan solos, y el párrafo que explica por qué esta persona quiere este puesto queda para ella. Un párrafo que suena bien pero no lo escribió nadie es peor que uno en blanco, porque se manda igual y después hay que defenderlo en una entrevista. El botón de descargar está deshabilitado mientras ese párrafo siga siendo el texto de guía.
 
+Con el CV en inglés, la carta se arma igual pero en inglés: las frases fijas están **escritas** en inglés en `domain/letter/letterModel.ts`, no traducidas, y se completan con el CV ya traducido. El párrafo del medio lo vuelve a escribir la persona, en inglés. Se guarda aparte (`letterEn`), así que las dos cartas conviven.
+
 ## Tests
 
 ```bash
@@ -144,6 +146,7 @@ Se testea el núcleo, no la interfaz:
 - La migración de lo guardado: documentos de las versiones 1 y 2 cargan enteros como una biblioteca de un CV, y el esquema actual solo los rechaza (así el test prueba la migración y no la tolerancia del esquema).
 - Comparar con el aviso, contra el texto de un aviso real.
 - La traducción con un traductor falso: que el glosario gane al traductor, que los nombres propios no se traduzcan, que un número cambiado o un nombre perdido se marquen, que retraducir mande solo lo que cambió y respete lo editado a mano, y que las plantillas impriman títulos, meses y "Present" en inglés.
+- La carta en inglés: apertura con el trabajo actual o el último, sin inventar experiencia cuando no hay, saludo, fecha y despedida en inglés, y que cualquiera de los dos textos de guía bloquee la descarga.
 - Las direcciones y quién puede entrar al editor (`screens/routes.ts`), y el tamaño con que se dibuja cada hoja de la vista previa.
 
 Lo que solo existe en el sitio construido lo verifica `npm run check:build` en el deploy: el `404.html` y que ningún archivo del sitio se pida con ruta relativa.
