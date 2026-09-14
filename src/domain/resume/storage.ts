@@ -105,6 +105,11 @@ export const cvSchema = documentSchema.omit({ schemaVersion: true }).extend({
   id: z.string(),
   letter: baseLetterSchema.optional(),
   translation: translationSchema.optional(),
+  /**
+   * The base's English cover letter. Its own letter, not a translation of the
+   * Spanish one: the paragraph is the writer's in each language.
+   */
+  letterEn: baseLetterSchema.optional(),
 })
 
 export type StoredCv = z.infer<typeof cvSchema>
@@ -152,11 +157,11 @@ export function freshCv(id: string, settings: Settings): StoredCv {
  * not kept: a library full of "Sin nombre" is noise that hides the real ones.
  */
 export function isBlankCv(cv: StoredCv): boolean {
-  const letter = cv.letter
-  const letterBlank =
+  const letterBlank = (letter: BaseLetter | undefined) =>
     !letter || [letter.role, letter.company, letter.recipient, letter.body].every((text) => !text.trim())
   return (
-    letterBlank &&
+    letterBlank(cv.letter) &&
+    letterBlank(cv.letterEn) &&
     cv.versions.length === 0 &&
     JSON.stringify(cv.resumes.es) === JSON.stringify(emptyResume())
   )

@@ -140,3 +140,49 @@ test('a version stays in Spanish: the language choice belongs to the base', asyn
   await page.getByLabel('Qué CV estás viendo').selectOption('')
   await expect(page.getByLabel('Idioma del CV')).toHaveValue('en')
 })
+
+test('the English letter is built from the English resume and kept apart from the Spanish one', async ({ page }) => {
+  await fakeTranslator(page, 'available')
+  await seed(page, savedDocument())
+  await page.goto('editor')
+
+  // A Spanish letter first, to prove the English one does not overwrite it.
+  await page.getByRole('button', { name: 'Carta de presentación' }).click()
+  const dialog = page.getByRole('dialog', { name: 'Carta de presentación' })
+  await dialog.getByLabel('Empresa').fill('Acme')
+  await dialog.getByLabel('El párrafo que escribís vos').fill('Me interesa atender clientes.')
+  await page.keyboard.press('Escape')
+
+  await page.getByLabel('Idioma del CV').selectOption('en')
+  await page.getByRole('button', { name: 'Traducir al inglés' }).click()
+  await expect(page.getByLabel('Puesto en Banco Cooperativo en inglés')).toHaveValue('Administrative Assistant')
+
+  await page.getByRole('button', { name: 'Carta de presentación' }).click()
+  await expect(dialog.getByText('Esta carta sale en inglés')).toBeVisible()
+  // The company carries over; the paragraph starts again, in English.
+  await expect(dialog.getByLabel('Empresa')).toHaveValue('Acme')
+  await dialog.getByLabel('Puesto al que te postulás').fill('Office Assistant')
+  await expect(
+    dialog.getByText('I am writing to apply for the Office Assistant position at Acme. Most recently, I worked as Administrative Assistant at Banco Cooperativo'),
+  ).toBeVisible()
+
+  const button = dialog.getByRole('button', { name: 'Descargar carta' })
+  await expect(button).toBeDisabled()
+  await dialog.getByLabel('El párrafo que escribís vos').fill('I enjoy helping customers.')
+  const download = page.waitForEvent('download')
+  await button.click()
+  expect((await download).suggestedFilename()).toBe('Laura-Pérez-Cover-Letter-Acme.pdf')
+  await page.keyboard.press('Escape')
+  await afterAutosave(page)
+
+  await page.reload()
+  await page.getByRole('button', { name: 'Carta de presentación' }).click()
+  await expect(dialog.getByLabel('El párrafo que escribís vos')).toHaveValue('I enjoy helping customers.')
+  await page.keyboard.press('Escape')
+
+  await page.getByLabel('Idioma del CV').selectOption('es')
+  await page.getByRole('button', { name: 'Carta de presentación' }).click()
+  await expect(dialog.getByText('Esta carta sale en inglés')).toHaveCount(0)
+  await expect(dialog.getByLabel('El párrafo que escribís vos')).toHaveValue('Me interesa atender clientes.')
+  await expect(dialog.getByText(/Me dirijo a ustedes/)).toBeVisible()
+})

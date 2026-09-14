@@ -181,6 +181,9 @@ export const copy = {
       'Por qué querés ESTE puesto en ESTA empresa, y qué de lo que hiciste le sirve. Dos o tres oraciones.',
     unwritten: 'Falta el párrafo del medio. Es el único que no podemos escribir por vos, y es el que se lee.',
     download: 'Descargar carta',
+    inEnglish:
+      'Esta carta sale en inglés, como el CV: la apertura y el cierre se arman con el CV traducido. El párrafo del medio escribilo en inglés. La carta en español queda guardada aparte.',
+    recipientHint: (fallback: string) => `Si sabés el nombre, ponelo. Si no, queda '${fallback}'.`,
     building: 'Armando la carta...',
     noModel:
       'No usamos inteligencia artificial para escribir por vos. Una carta que suena bien pero no la escribiste se nota en la entrevista.',

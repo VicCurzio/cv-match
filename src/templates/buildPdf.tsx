@@ -66,10 +66,10 @@ export async function buildLetterPdf(
   const forExport = applyProfile(resume, options.profile, { atsMode: options.atsMode })
   const serifHeadings = options.atsMode || options.template === 'harvard'
   return pdf(
-    <CoverLetter resume={forExport} letter={letter} serifHeadings={serifHeadings} />,
+    <CoverLetter resume={forExport} letter={letter} serifHeadings={serifHeadings} locale={options.locale ?? 'es'} />,
   ).toBlob()
 }
 
-export function letterFileName(resume: Resume, company?: string): string {
-  return fileName(resume, company, 'Carta')
+export function letterFileName(resume: Resume, company?: string, locale: Locale = 'es'): string {
+  return fileName(resume, company, locale === 'en' ? 'Cover-Letter' : 'Carta')
 }

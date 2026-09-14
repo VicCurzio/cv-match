@@ -3,6 +3,7 @@ import type { Letter } from '@/domain/letter/letterModel'
 import { letterDate } from '@/domain/letter/letterModel'
 import type { Resume } from '@/domain/resume/resumeSchema'
 import { PAGE, contactParts } from '@/templates/shared/format'
+import { LABELS, type Locale } from '@/templates/shared/labels'
 
 /**
  * The cover letter, matching the resume it travels with.
@@ -48,37 +49,41 @@ interface Props {
   letter: Letter
   serifHeadings: boolean
   today?: Date
+  locale?: Locale
 }
 
-export function CoverLetter({ resume, letter, serifHeadings, today = new Date() }: Props) {
+export function CoverLetter({ resume, letter, serifHeadings, today = new Date(), locale = 'es' }: Props) {
   const styles = makeStyles(serifHeadings)
+  const l = LABELS[locale]
   const contact = contactParts(resume)
 
   return (
     <Document
-      title={`${resume.personal.fullName} - Carta de presentación`}
+      title={`${resume.personal.fullName} - ${l.letterTitle}`}
       author={resume.personal.fullName}
-      language="es"
+      language={locale}
     >
       <Page size="A4" style={styles.page}>
         <View wrap={false}>
-          <Text style={styles.name}>{resume.personal.fullName || 'Tu nombre'}</Text>
+          <Text style={styles.name}>{resume.personal.fullName || l.placeholderName}</Text>
           {contact.length > 0 ? (
             <Text style={styles.contact}>{contact.join('  |  ')}</Text>
           ) : null}
           <View style={styles.rule} />
         </View>
 
-        <Text style={styles.date}>{letterDate(letter.city, today)}</Text>
+        <Text style={styles.date}>{letterDate(letter.city, today, locale)}</Text>
 
         <Text style={styles.recipient}>{letter.recipient}</Text>
         {letter.company ? <Text style={styles.company}>{letter.company}</Text> : null}
 
+        {/* An English letter opens with a salutation; the Spanish one names the recipient above and goes straight in. */}
+        {locale === 'en' ? <Text style={styles.paragraph}>{`Dear ${letter.recipient},`}</Text> : null}
         <Text style={styles.paragraph}>{letter.opening}</Text>
         <Text style={styles.paragraph}>{letter.body}</Text>
         <Text style={styles.paragraph}>{letter.closing}</Text>
 
-        <Text style={styles.signOff}>Saludos cordiales,</Text>
+        <Text style={styles.signOff}>{l.signOff}</Text>
         <Text style={styles.signature}>{resume.personal.fullName}</Text>
       </Page>
     </Document>

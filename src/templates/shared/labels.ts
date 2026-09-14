@@ -24,9 +24,10 @@ export const LABELS: Record<
     inProgress: string
     placeholderName: string
     documentKind: string
+    letterTitle: string
+    signOff: string
     months: string[]
     abilities: Record<LanguageAbility, string>
-    and: string
   }
 > = {
   es: {
@@ -41,9 +42,10 @@ export const LABELS: Record<
     inProgress: 'en curso',
     placeholderName: 'Tu nombre',
     documentKind: 'CV',
+    letterTitle: 'Carta de presentación',
+    signOff: 'Saludos cordiales,',
     months: ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'],
     abilities: { reading: 'lectura', listening: 'comprensión oral', speaking: 'conversación', writing: 'escritura' },
-    and: 'y',
   },
   en: {
     summary: 'PROFESSIONAL SUMMARY',
@@ -57,8 +59,9 @@ export const LABELS: Record<
     inProgress: 'In progress',
     placeholderName: 'Your name',
     documentKind: 'Resume',
+    letterTitle: 'Cover Letter',
+    signOff: 'Sincerely,',
     months: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
     abilities: { reading: 'reading', listening: 'listening', speaking: 'speaking', writing: 'writing' },
-    and: 'and',
   },
 }

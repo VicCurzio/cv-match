@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { cleanAr } from '@/test/fixtures'
 import type { ExperienceItem, Resume } from '@/domain/resume/resumeSchema'
-import { BODY_PLACEHOLDER, draftLetter, isUnwritten, latestJob, letterDate } from './letterModel'
+import { BODY_PLACEHOLDER, BODY_PLACEHOLDER_EN, draftLetter, isUnwritten, latestJob, letterDate } from './letterModel'
 
 const input = { role: 'Analista administrativa', company: 'Banco Credicoop' }
 
@@ -117,5 +117,51 @@ describe('the opening says the truth about the latest job', () => {
 
   it('with no jobs, it does not claim one', () => {
     expect(draftLetter(withJobs([]), input).opening).toContain('Cuento con experiencia')
+  })
+})
+
+describe('in English, the letter is written in English, not translated word by word', () => {
+  const english: Resume = {
+    ...cleanAr,
+    skills: ['Customer service', 'Excel', 'Payroll processing', 'SAP'],
+    experience: [
+      { id: 'a', role: 'Administrative Assistant', company: 'Banco Cooperativo', startDate: '2025-01', endDate: null, bullets: [] },
+    ],
+  }
+  const job = { role: 'Office Assistant', company: 'Acme Corp' }
+
+  it('opens with the position and the current job, and three skills with a serial comma', () => {
+    const letter = draftLetter(english, job, 'en')
+    expect(letter.opening).toBe(
+      'I am writing to apply for the Office Assistant position at Acme Corp. I currently work as Administrative Assistant at Banco Cooperativo, with experience in Customer service, Excel, and Payroll processing.',
+    )
+  })
+
+  it('says "most recently" for a job that has ended', () => {
+    const ended = { ...english, experience: english.experience.map((item) => ({ ...item, endDate: '2026-08' })) }
+    expect(draftLetter(ended, job, 'en').opening).toContain('Most recently, I worked as Administrative Assistant at Banco Cooperativo')
+  })
+
+  it('without jobs or skills it claims nothing, not even an empty "I have experience"', () => {
+    const empty = { ...english, experience: [], skills: [] }
+    expect(draftLetter(empty, job, 'en').opening).toBe('I am writing to apply for the Office Assistant position at Acme Corp.')
+  })
+
+  it('addresses the hiring team, closes in English and asks for the paragraph in English', () => {
+    const letter = draftLetter(english, job, 'en')
+    expect(letter.recipient).toBe('Hiring Team')
+    expect(letter.closing).toMatch(/^I would welcome the opportunity/)
+    expect(letter.body).toBe(BODY_PLACEHOLDER_EN)
+    expect(isUnwritten(letter)).toBe(true)
+  })
+
+  it('either placeholder counts as unwritten, so the export stays blocked', () => {
+    const letter = draftLetter(english, job, 'en')
+    expect(isUnwritten({ ...letter, body: BODY_PLACEHOLDER })).toBe(true)
+    expect(isUnwritten({ ...letter, body: 'I enjoy helping customers.' })).toBe(false)
+  })
+
+  it('dates it the American way, without the city', () => {
+    expect(letterDate('La Plata', new Date(2026, 8, 7), 'en')).toBe('September 7, 2026')
   })
 })

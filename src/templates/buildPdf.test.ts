@@ -314,6 +314,21 @@ describe('the cover letter is a real document too', () => {
     expect(pdf.pages).toHaveLength(1)
   })
 
+  it('in English, greets, dates and signs off in English', async () => {
+    const english = {
+      ...draftLetter(withPhoto, { role: 'Office Assistant', company: 'Acme Corp' }, 'en'),
+      body: 'I enjoy solving problems for customers.',
+    }
+    const blob = await buildLetterPdf(withPhoto, english, { profile: INTL_PROFILE, atsMode: false, template: 'modern', locale: 'en' })
+    const pdf = await readPdf(new Uint8Array(await blob.arrayBuffer()))
+
+    expect(pdf.text).toContain('Dear Hiring Team,')
+    expect(pdf.text).toContain('Sincerely,')
+    expect(pdf.text).toMatch(/(January|February|March|April|May|June|July|August|September|October|November|December) \d{1,2}, \d{4}/)
+    expect(pdf.text).not.toContain('Saludos cordiales')
+    expect(pdf.pages).toHaveLength(1)
+  })
+
   it('never breaks a line with a hyphen', async () => {
     const pdf = await renderLetter({ profile: AR_PROFILE, atsMode: true, template: 'harvard' })
     expect(pdf.lines.filter((l) => l.trim() !== '-' && /-$/.test(l.trim()))).toEqual([])

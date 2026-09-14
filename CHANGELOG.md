@@ -5,6 +5,12 @@ Versionado según [SemVer](https://semver.org/lang/es/).
 
 ## [No publicado]
 
+### Agregado: la carta de presentación en inglés (probada de punta a punta)
+
+- Con el CV en English, la carta sale en inglés: la apertura se arma con el CV traducido ("I am writing to apply for the ... position at ..."), con saludo "Dear Hiring Team,", fecha en formato estadounidense, cierre y "Sincerely,". El párrafo del medio lo sigue escribiendo la persona, ahora en inglés.
+- La carta en inglés se guarda aparte de la española (toma la empresa de la española como punto de partida) y baja como `Nombre-Cover-Letter-Empresa.pdf`.
+- Las versiones por aviso siguen con la carta en español.
+
 ### Agregado: el CV en inglés (probado de punta a punta)
 
 - **Selector de idioma en el CV base: Español o English.** En inglés, el formulario muestra cada texto del CV con su español al lado y el inglés editable.
@@ -14,13 +20,12 @@ Versionado según [SemVer](https://semver.org/lang/es/).
 - **El inglés se guarda como capa sobre el CV en español**, con cada CV. Fechas, empresas y contacto salen siempre del español. Si un texto en español cambia después de traducirlo, se imprime en español y se marca hasta revisarlo; "Traducir lo que falta" manda solo eso y respeta lo corregido a mano.
 - Las plantillas imprimen títulos de sección, meses, "Present" e "In progress" en inglés, y el archivo se llama `Nombre-Resume.pdf`.
 - Sin traductor en el navegador (celular, Firefox, Safari) la app lo dice y el inglés se escribe a mano. Lo mismo si el navegador trae el traductor pero no contesta: pasa en un navegador basado en Chromium probado durante el desarrollo, que expone la API y nunca responde. La app deja de esperar a los 8 segundos, y una traducción colgada a los 30.
-- En inglés se sugiere pasar al mercado Internacional. Las versiones por aviso y la carta siguen en español.
+- En inglés se sugiere pasar al mercado Internacional. Las versiones por aviso siguen en español.
 - El formato guardado no cambia de versión: la traducción es un campo opcional, así que todo lo guardado antes sigue leyéndose igual.
 
 ### Cambiado
 
 - El puerto de generación (`domain/generate`) queda solo para la carta: la traducción ya no espera detrás de él.
-
 - Las copias `.json` se descargan con el nombre de la persona (`cv-match-Laura-Perez.json`). Con varios CV, todas se llamaban `cv-match.json` y en la carpeta de descargas no se sabía de quién era cada una.
 
 ### Mantenimiento

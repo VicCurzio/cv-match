@@ -1,14 +1,10 @@
 import { Download, X } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { downloadBlob } from '@/domain/export/download'
-import {
-  BODY_PLACEHOLDER,
-  draftLetter,
-  isUnwritten,
-  type Letter,
-} from '@/domain/letter/letterModel'
+import { bodyPlaceholder, draftLetter, isUnwritten, type Letter } from '@/domain/letter/letterModel'
 import type { MarketProfile } from '@/domain/market/marketProfile'
 import type { Resume } from '@/domain/resume/resumeSchema'
+import type { Locale } from '@/domain/resume/translation'
 import { Button } from '@/shared/ui/Button'
 import { Notice } from '@/shared/ui/Card'
 import { Dialog } from '@/shared/ui/Dialog'
@@ -36,6 +32,11 @@ interface Props {
   profile: MarketProfile
   atsMode: boolean
   template: 'harvard' | 'modern'
+  /**
+   * The letter's language. In English, `resume` is the English resume, so the
+   * opening names the job the way the resume does. Spanish when absent.
+   */
+  locale?: Locale
   /** A version's saved letter. Without one the dialog starts blank, as for the base. */
   initial?: LetterFields
   /**
@@ -52,12 +53,14 @@ export function LetterDialog({
   profile,
   atsMode,
   template,
+  locale = 'es',
   initial,
   onChange,
   onClose,
 }: Props) {
+  const placeholder = bodyPlaceholder(locale)
   const [fields, setFields] = useState<LetterFields>(
-    () => initial ?? { role: '', company: '', recipient: '', body: BODY_PLACEHOLDER },
+    () => initial ?? { role: '', company: '', recipient: '', body: placeholder },
   )
   const [busy, setBusy] = useState(false)
   const { role, company, recipient, body } = fields
@@ -72,16 +75,16 @@ export function LetterDialog({
 
   // The header and closing follow the job fields; only the body is the writer's.
   const letter: Letter = useMemo(
-    () => ({ ...draftLetter(resume, { role, company, recipient }), body }),
-    [resume, role, company, recipient, body],
+    () => ({ ...draftLetter(resume, { role, company, recipient }, locale), body }),
+    [resume, role, company, recipient, body, locale],
   )
 
   const unwritten = isUnwritten(letter)
 
   async function download() {
     setBusy(true)
-    const blob = await buildLetterPdf(resume, letter, { profile, atsMode, template })
-    downloadBlob(blob, letterFileName(resume, company))
+    const blob = await buildLetterPdf(resume, letter, { profile, atsMode, template, locale })
+    downloadBlob(blob, letterFileName(resume, company, locale))
     setBusy(false)
   }
 
@@ -98,10 +101,12 @@ export function LetterDialog({
       </div>
 
       <div className="flex flex-col gap-4 p-5">
+        {locale === 'en' ? <Notice>{copy.letter.inEnglish}</Notice> : null}
+
         <div className="grid gap-4 sm:grid-cols-2">
           <TextField
             label="Puesto al que te postulás"
-            placeholder="Auxiliar administrativa"
+            placeholder={locale === 'en' ? 'Administrative Assistant' : 'Auxiliar administrativa'}
             value={role}
             onChange={(e) => update({ role: e.target.value })}
           />
@@ -115,8 +120,8 @@ export function LetterDialog({
 
         <TextField
           label="A quién va dirigida (opcional)"
-          hint="Si sabés el nombre, ponelo. Si no, queda 'Equipo de Selección'."
-          placeholder="Equipo de Selección"
+          hint={copy.letter.recipientHint(draftLetter(resume, { role: '', company: '' }, locale).recipient)}
+          placeholder={draftLetter(resume, { role: '', company: '' }, locale).recipient}
           value={recipient}
           onChange={(e) => update({ recipient: e.target.value })}
         />
@@ -134,7 +139,7 @@ export function LetterDialog({
           onChange={(e) => update({ body: e.target.value })}
           onFocus={(e) => {
             // Clear the guidance the first time, so nobody types around it.
-            if (e.target.value === BODY_PLACEHOLDER) update({ body: '' })
+            if (e.target.value === placeholder) update({ body: '' })
           }}
         />
 

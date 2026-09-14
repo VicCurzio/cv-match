@@ -61,7 +61,11 @@ function slug(text: string): string {
  * with five files in their downloads, and five identical names is how the
  * wrong one gets attached.
  */
-export function fileName(resume: Resume, company?: string, kind: 'CV' | 'Carta' | 'Resume' = 'CV'): string {
+export function fileName(
+  resume: Resume,
+  company?: string,
+  kind: 'CV' | 'Carta' | 'Resume' | 'Cover-Letter' = 'CV',
+): string {
   const name = slug(resume.personal.fullName) || 'CV'
   const target = company ? slug(company) : ''
   return target ? `${name}-${kind}-${target}.pdf` : `${name}-${kind}.pdf`
@@ -94,12 +98,6 @@ export function languageLevel(language: LanguageItem, locale: Locale = 'es'): st
   const abilities = LANGUAGE_ABILITIES.filter((ability) => language.abilities?.includes(ability))
   const qualified = abilities.length > 0 && abilities.length < LANGUAGE_ABILITIES.length
   const labels = abilities.map((ability) => LABELS[locale].abilities[ability])
-  const detail = !qualified
-    ? ''
-    : locale === 'es'
-      ? listOf(labels)
-      : labels.length <= 1
-        ? (labels[0] ?? '')
-        : `${labels.slice(0, -1).join(', ')} ${LABELS.en.and} ${labels.at(-1)}`
+  const detail = qualified ? listOf(labels, locale) : ''
   return [level, detail].filter(Boolean).join(', ')
 }

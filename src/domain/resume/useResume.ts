@@ -95,6 +95,9 @@ export interface ResumeState {
    */
   setBaseSettings: (patch: Partial<Settings>) => void
   setBaseLetter: (letter: BaseLetter) => void
+  /** The base's English cover letter, kept apart from the Spanish one. */
+  baseLetterEn: BaseLetter | undefined
+  setBaseLetterEn: (letter: BaseLetter) => void
   /** Replaces the open resume's base: a resume read from a PDF or Word file. Versions stay. */
   replaceAll: (resume: Resume) => void
   /** Adds a new, empty resume with these settings and opens it. The open one is kept. */
@@ -144,6 +147,7 @@ export function useResume(selectedVersionId?: string | null): ResumeState {
   const [baseSettings, setBaseSettings] = useState<Settings>(first.settings)
   const [versions, setVersions] = useState<Version[]>(first.versions)
   const [baseLetter, setBaseLetter] = useState<BaseLetter | undefined>(first.letter)
+  const [baseLetterEn, setBaseLetterEn] = useState<BaseLetter | undefined>(first.letterEn)
   const [chosenLocale, setChosenLocale] = useState<Locale>(first.activeLocale)
   const [translation, setTranslationState] = useState<Translation | undefined>(first.translation)
   const [activeVersionId, setActiveVersionId] = useState<string | null>(
@@ -201,8 +205,9 @@ export function useResume(selectedVersionId?: string | null): ResumeState {
       activeVersionId: activeVersion?.id ?? null,
       ...(baseLetter ? { letter: baseLetter } : {}),
       ...(translation ? { translation } : {}),
+      ...(baseLetterEn ? { letterEn: baseLetterEn } : {}),
     }),
-    [openId, base, baseSettings, versions, activeVersion, baseLetter, chosenLocale, translation],
+    [openId, base, baseSettings, versions, activeVersion, baseLetter, chosenLocale, translation, baseLetterEn],
   )
 
   /**
@@ -266,6 +271,7 @@ export function useResume(selectedVersionId?: string | null): ResumeState {
       setBaseSettings(next.settings)
       setVersions(next.versions)
       setBaseLetter(next.letter)
+      setBaseLetterEn(next.letterEn)
       setChosenLocale(next.activeLocale)
       setTranslationState(next.translation)
       setActiveVersionId(next.activeVersionId)
@@ -306,6 +312,7 @@ export function useResume(selectedVersionId?: string | null): ResumeState {
       setBaseSettings(next.settings)
       setVersions(next.versions)
       setBaseLetter(next.letter)
+      setBaseLetterEn(next.letterEn)
       setChosenLocale(next.activeLocale)
       setTranslationState(next.translation)
       setActiveVersionId(next.activeVersionId)
@@ -401,6 +408,8 @@ export function useResume(selectedVersionId?: string | null): ResumeState {
     activeVersionId,
     settings,
     baseLetter,
+    baseLetterEn,
+    setBaseLetterEn,
     cvs,
     openIsBlank: isBlankCv(open),
     saveError,

@@ -11,8 +11,12 @@ export function hasNumber(text: string): boolean {
 }
 
 /** "a, b y c" -- the Spanish list, without the serial comma. */
-export function listOf(items: string[]): string {
+export function listOf(items: string[], language: 'es' | 'en' = 'es'): string {
   if (items.length <= 1) return items[0] ?? ''
+  if (language === 'en') {
+    // "Excel and SAP", but "Excel, SAP, and Tango": the serial comma of American business English.
+    return items.length === 2 ? `${items[0]} and ${items[1]}` : `${items.slice(0, -1).join(', ')}, and ${items.at(-1)}`
+  }
   return `${items.slice(0, -1).join(', ')} y ${items.at(-1)}`
 }
 

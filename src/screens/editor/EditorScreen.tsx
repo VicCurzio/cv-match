@@ -4,7 +4,7 @@ import { Link, useLocation, useNavigate } from 'react-router'
 import { runAnalysis } from '@/domain/analysis/runAnalysis'
 import { downloadBlob, downloadJson } from '@/domain/export/download'
 import { MARKET_PROFILES, forbiddenFields, type MarketId } from '@/domain/market/marketProfile'
-import { BODY_PLACEHOLDER } from '@/domain/letter/letterModel'
+import { BODY_PLACEHOLDER, BODY_PLACEHOLDER_EN } from '@/domain/letter/letterModel'
 import { FIELD_LABEL } from '@/domain/resume/resumeSchema'
 import { exportCv, parseCopy } from '@/domain/resume/storage'
 import type { ResumeState } from '@/domain/resume/useResume'
@@ -368,8 +368,9 @@ export function EditorScreen({ state }: { state: ResumeState }) {
 
       {writingLetter ? (
         <LetterDialog
-          // The letter is written in Spanish, so it reads the Spanish resume.
-          resume={locale === 'en' ? base : resume}
+          // In English, the English resume: the opening names the job as the resume does.
+          resume={resume}
+          locale={locale}
           profile={profile}
           atsMode={settings.atsMode}
           template={settings.template}
@@ -390,11 +391,22 @@ export function EditorScreen({ state }: { state: ResumeState }) {
                     letter: { recipient, body },
                   })),
               }
-            : {
-                ...(state.baseLetter ? { initial: state.baseLetter } : {}),
-                // The base keeps its own letter too; it used to be gone on reload.
-                onChange: (fields) => state.setBaseLetter(fields),
-              })}
+            : locale === 'en'
+              ? {
+                  // Its own letter, started from the Spanish one's company: the paragraph is written again.
+                  initial: state.baseLetterEn ?? {
+                    role: '',
+                    company: state.baseLetter?.company ?? '',
+                    recipient: '',
+                    body: BODY_PLACEHOLDER_EN,
+                  },
+                  onChange: (fields) => state.setBaseLetterEn(fields),
+                }
+              : {
+                  ...(state.baseLetter ? { initial: state.baseLetter } : {}),
+                  // The base keeps its own letter too; it used to be gone on reload.
+                  onChange: (fields) => state.setBaseLetter(fields),
+                })}
           onClose={() => setWritingLetter(false)}
         />
       ) : null}

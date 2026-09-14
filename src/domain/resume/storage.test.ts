@@ -122,6 +122,18 @@ describe('a copy read from a file is validated and added, never replacing anythi
     expect(result.ok && result.cvs).toEqual([translated])
   })
 
+  it('keeps the English letter apart from the Spanish one, and counts it as content', () => {
+    const englishLetter = { role: 'Office Assistant', company: 'Acme', recipient: '', body: 'I enjoy it.' }
+    const withLetters: StoredCv = {
+      ...(library.cvs[1] as StoredCv),
+      letter: { role: 'Asistente', company: 'Acme', recipient: '', body: 'Me gusta.' },
+      letterEn: englishLetter,
+    }
+    const result = parseCopy(JSON.stringify(exportCv(withLetters)))
+    expect(result.ok && result.cvs[0]?.letterEn).toEqual(englishLetter)
+    expect(isBlankCv({ ...freshCv('cv-x', settings), letterEn: englishLetter })).toBe(false)
+  })
+
   it('a library saved before translation existed still reads as it is', () => {
     const before = JSON.parse(JSON.stringify(library)) as StoredLibrary
     expect(before.cvs.every((cv) => cv.translation === undefined)).toBe(true)
