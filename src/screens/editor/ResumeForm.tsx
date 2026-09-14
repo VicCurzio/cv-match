@@ -1,10 +1,13 @@
 import { Plus, Trash2 } from 'lucide-react'
 import { useState } from 'react'
+import type { ZodType } from 'zod'
 import type { MarketProfile } from '@/domain/market/marketProfile'
 import { PhotoDialog } from './PhotoDialog'
 import {
   LANGUAGE_ABILITIES,
   RESTRICTABLE_FIELDS,
+  yearMonth,
+  yearOrMonth,
   type CourseItem,
   type EducationItem,
   type ExperienceItem,
@@ -46,6 +49,65 @@ const LANGUAGE_LEVEL_SUGGESTIONS = ['Nativo', 'A1', 'A2', 'B1', 'B2', 'C1', 'C2'
 const PERSONAL_DATA_FIELDS = RESTRICTABLE_FIELDS.filter(
   (field): field is PersonalDataField => field !== 'photo',
 )
+
+/**
+ * A date input that only hands over complete dates.
+ *
+ * Dates are validated when the saved document is read back, and the form used
+ * to store whatever was typed. So "2024-1", left half-typed when the tab was
+ * closed, reached storage -- and on the next visit the whole document failed
+ * to validate, was set aside as unreadable, and the app started blank. Now the
+ * text lives here until it is a valid date (or empty, where empty means
+ * something), and the resume keeps its last good value meanwhile.
+ */
+function DateField({
+  label,
+  placeholder,
+  hint,
+  example,
+  value,
+  schema,
+  allowEmpty,
+  onCommit,
+}: {
+  label: string
+  placeholder?: string
+  hint?: string
+  example: string
+  value: string
+  schema: ZodType
+  allowEmpty: boolean
+  onCommit: (value: string) => void
+}) {
+  const [draft, setDraft] = useState(value)
+  const [committed, setCommitted] = useState(value)
+  // A value changed from outside -- an import, a loaded copy -- replaces the draft.
+  if (value !== committed) {
+    setCommitted(value)
+    setDraft(value)
+  }
+
+  const accepts = (text: string) => (text === '' ? allowEmpty : schema.safeParse(text).success)
+  const invalid = !accepts(draft.trim())
+
+  return (
+    <TextField
+      label={label}
+      placeholder={placeholder}
+      hint={invalid ? copy.editor.dateInvalid(example) : hint}
+      aria-invalid={invalid}
+      value={draft}
+      onChange={(e) => {
+        const text = e.target.value
+        setDraft(text)
+        if (accepts(text.trim())) {
+          setCommitted(text.trim())
+          onCommit(text.trim())
+        }
+      }}
+    />
+  )
+}
 
 interface Props {
   resume: Resume
@@ -327,17 +389,23 @@ export function ResumeForm({ resume, profile, atsMode, onChange, onPhotoError }:
                 value={item.company}
                 onChange={(e) => patchExperience(index, { company: e.target.value })}
               />
-              <TextField
+              <DateField
                 label="Desde (AAAA-MM)"
                 placeholder="2021-03"
+                example="2021-03"
                 value={item.startDate}
-                onChange={(e) => patchExperience(index, { startDate: e.target.value })}
+                schema={yearMonth}
+                allowEmpty={false}
+                onCommit={(date) => patchExperience(index, { startDate: date })}
               />
-              <TextField
+              <DateField
                 label="Hasta (AAAA-MM)"
                 placeholder="Vacío = actualidad"
+                example="2023-11, o vacío si seguís ahí"
                 value={item.endDate ?? ''}
-                onChange={(e) => patchExperience(index, { endDate: e.target.value || null })}
+                schema={yearMonth}
+                allowEmpty
+                onCommit={(date) => patchExperience(index, { endDate: date || null })}
               />
             </div>
 
@@ -390,11 +458,14 @@ export function ResumeForm({ resume, profile, atsMode, onChange, onPhotoError }:
               value={item.institution}
               onChange={(e) => patchEducation(index, { institution: e.target.value })}
             />
-            <TextField
+            <DateField
               label="Terminó (AAAA-MM)"
               placeholder="2019-12"
+              example="2019-12"
               value={item.endDate ?? ''}
-              onChange={(e) => patchEducation(index, { endDate: e.target.value || undefined })}
+              schema={yearMonth}
+              allowEmpty
+              onCommit={(date) => patchEducation(index, { endDate: date || undefined })}
             />
             <SelectField
               label="Estado"
@@ -447,12 +518,15 @@ export function ResumeForm({ resume, profile, atsMode, onChange, onPhotoError }:
               value={item.institution}
               onChange={(e) => patchCourse(index, { institution: e.target.value })}
             />
-            <TextField
+            <DateField
               label="Terminó"
               hint="El año solo alcanza: 2025. Si te acordás el mes, 2025-03."
               placeholder="2025"
+              example="2025 o 2025-03"
               value={item.endDate ?? ''}
-              onChange={(e) => patchCourse(index, { endDate: e.target.value || undefined })}
+              schema={yearOrMonth}
+              allowEmpty
+              onCommit={(date) => patchCourse(index, { endDate: date || undefined })}
             />
             <TextField
               label="Detalle (opcional)"

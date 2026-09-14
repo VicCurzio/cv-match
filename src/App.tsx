@@ -67,6 +67,8 @@ export default function App() {
                 : null
             }
             onBackup={() => downloadJson(state.toDocument(), copy.start.backupFileName)}
+            unreadable={state.unreadable}
+            onDismissUnreadable={state.dismissUnreadable}
             onStart={(settings) => {
               // A first visit has nothing to replace. Otherwise the screen has
               // already asked, and this is the confirmed start over.

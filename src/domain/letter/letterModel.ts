@@ -1,6 +1,7 @@
 import { z } from 'zod'
 import type { Resume } from '@/domain/resume/resumeSchema'
-import { listOf } from '@/shared/utils/text'
+import type { ExperienceItem } from '@/domain/resume/resumeSchema'
+import { listOf, monthIndex } from '@/shared/utils/text'
 
 /**
  * The cover letter, without a language model (ADR 0003).
@@ -31,6 +32,26 @@ export const BODY_PLACEHOLDER =
 const DEFAULT_RECIPIENT = 'Equipo de Selección'
 
 /**
+ * The job to open the letter with: a current one if there is any, the most
+ * recently started; otherwise the one that ended last.
+ *
+ * It used to be `experience[0]` under the words "Actualmente me desempeño
+ * como". The first job in the list is not necessarily the latest, and the
+ * latest is not necessarily still going: a real letter went out saying the
+ * person currently worked somewhere they had left the month before.
+ */
+export function latestJob(experience: ExperienceItem[]): { item: ExperienceItem; current: boolean } | null {
+  const started = (item: ExperienceItem) => monthIndex(item.startDate) ?? -1
+  const ended = (item: ExperienceItem) => (item.endDate ? (monthIndex(item.endDate) ?? -1) : -1)
+
+  const current = experience.filter((item) => item.endDate === null).sort((a, b) => started(b) - started(a))[0]
+  if (current) return { item: current, current: true }
+
+  const last = [...experience].sort((a, b) => ended(b) - ended(a))[0]
+  return last ? { item: last, current: false } : null
+}
+
+/**
  * Builds the draft from the resume. Deterministic: same resume and same job,
  * same letter. Nothing is invented -- every fact comes from a field the person
  * already filled in.
@@ -39,12 +60,15 @@ export function draftLetter(
   resume: Resume,
   input: { role: string; company: string; recipient?: string },
 ): Letter {
-  const current = resume.experience[0]
+  const job = latestJob(resume.experience)
   const skills = resume.skills.filter((s) => s.trim()).slice(0, 3)
 
-  const where = current
-    ? `Actualmente me desempeño como ${current.role}${current.company ? ` en ${current.company}` : ''}`
-    : 'Cuento con experiencia'
+  const at = job ? `${job.item.role}${job.item.company ? ` en ${job.item.company}` : ''}` : ''
+  const where = !job
+    ? 'Cuento con experiencia'
+    : job.current
+      ? `Actualmente me desempeño como ${at}`
+      : `Mi último puesto fue ${at}`
 
   const withSkills = skills.length > 0 ? `, con experiencia en ${listOf(skills)}` : ''
 

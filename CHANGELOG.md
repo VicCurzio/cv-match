@@ -5,6 +5,12 @@ Versionado según [SemVer](https://semver.org/lang/es/).
 
 ## [No publicado]
 
+### Arreglado (tercera revisión)
+
+- **Una fecha a medio escribir hacía perder el CV.** El formulario guardaba lo tipeado tal cual; con "2024-1" en una fecha y la pestaña cerrada, el documento guardado no pasaba la validación al volver, se apartaba como ilegible y la app arrancaba en blanco. Ahora las fechas se guardan recién cuando están completas, el campo dice "Todavía no se guarda: usá el formato 2021-03" y el CV conserva la última fecha buena. El test de punta a punta se escribió primero y falló antes del arreglo.
+- **La carta decía "Actualmente me desempeño como..." sobre un trabajo terminado.** Tomaba el primer trabajo de la lista sin mirar la fecha de fin. Ahora elige el trabajo en curso más reciente, o si no hay, el último que terminó, y en ese caso dice "Mi último puesto fue...".
+- **El aviso para recuperar un CV ilegible no se veía.** Con las rutas, sin CV legible la app queda en el inicio, y el aviso estaba solo en el editor. Ahora aparece en los dos.
+
 ### Cambiado: cargar una copia pregunta antes de reemplazar
 
 - **"Cargar copia (.json)" ya no reemplaza en el acto.** Si hay algo escrito, pregunta y nombra los dos lados: qué tenés abierto y qué trae el archivo, con sus versiones. Ofrece bajar una copia de lo actual antes, o cargar sin copia, o cancelar.

@@ -2,6 +2,7 @@ import { ArrowRight, Building2, Download, Globe2, Mail } from 'lucide-react'
 import { useState } from 'react'
 import { MARKET_PROFILES, type MarketId } from '@/domain/market/marketProfile'
 import type { Settings } from '@/domain/resume/storage'
+import { RecoveryNotice } from '@/screens/recovery/RecoveryNotice'
 import { Card } from '@/shared/ui/Card'
 import { Dialog } from '@/shared/ui/Dialog'
 import { Button } from '@/shared/ui/Button'
@@ -20,6 +21,9 @@ interface Props {
   onResume: () => void
   /** Downloads the saved document as a `.json` copy. */
   onBackup: () => void
+  /** The raw text of a saved document that could not be read, to offer back. */
+  unreadable: string | null
+  onDismissUnreadable: () => void
 }
 
 function Choice({
@@ -58,7 +62,7 @@ function Choice({
   )
 }
 
-export function StartScreen({ saved, onStart, onResume, onBackup }: Props) {
+export function StartScreen({ saved, onStart, onResume, onBackup, unreadable, onDismissUnreadable }: Props) {
   const [market, setMarket] = useState<MarketId>('AR')
   const [atsMode, setAtsMode] = useState<boolean | null>(null)
   const [confirming, setConfirming] = useState(false)
@@ -89,6 +93,8 @@ export function StartScreen({ saved, onStart, onResume, onBackup }: Props) {
         <h1 className="mt-2 text-3xl font-semibold tracking-tight">{copy.start.title}</h1>
         <p className="mt-2 text-sm text-muted-foreground">{copy.start.subtitle}</p>
       </header>
+
+      {unreadable ? <RecoveryNotice unreadable={unreadable} onDismiss={onDismissUnreadable} /> : null}
 
       {saved ? (
         <Card className="flex flex-wrap items-center justify-between gap-4 p-5">

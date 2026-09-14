@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { cleanAr } from '@/test/fixtures'
-import { BODY_PLACEHOLDER, draftLetter, isUnwritten, letterDate } from './letterModel'
+import type { ExperienceItem, Resume } from '@/domain/resume/resumeSchema'
+import { BODY_PLACEHOLDER, draftLetter, isUnwritten, latestJob, letterDate } from './letterModel'
 
 const input = { role: 'Analista administrativa', company: 'Banco Credicoop' }
 
@@ -73,5 +74,48 @@ describe('letterDate writes a business date in full', () => {
 
   it('drops the city when there is none', () => {
     expect(letterDate('', new Date(2026, 0, 1))).toBe('1 de enero de 2026')
+  })
+})
+
+/**
+ * A real letter said "Actualmente me desempeño como Administrativa en ..." about
+ * a job that had ended the month before, because the opening took the first job
+ * in the list and never looked at its end date.
+ */
+describe('the opening says the truth about the latest job', () => {
+  const job = (id: string, startDate: string, endDate: string | null): ExperienceItem => ({
+    id,
+    role: `Puesto ${id}`,
+    company: `Empresa ${id}`,
+    startDate,
+    endDate,
+    bullets: [],
+  })
+  const withJobs = (experience: ExperienceItem[]): Resume => ({ ...cleanAr, experience })
+
+  it('says "actualmente" only for a job that has not ended', () => {
+    const letter = draftLetter(withJobs([job('a', '2025-01', null)]), input)
+    expect(letter.opening).toContain('Actualmente me desempeño como Puesto a en Empresa a')
+  })
+
+  it('says "mi último puesto" for a job that has ended', () => {
+    const letter = draftLetter(withJobs([job('a', '2025-01', '2026-08')]), input)
+    expect(letter.opening).toContain('Mi último puesto fue Puesto a en Empresa a')
+    expect(letter.opening).not.toContain('Actualmente')
+  })
+
+  it('prefers a current job even when it is not first in the list', () => {
+    const picked = latestJob([job('old', '2015-12', '2024-01'), job('now', '2025-02', null)])
+    expect(picked).toEqual({ item: job('now', '2025-02', null), current: true })
+  })
+
+  it('among ended jobs, takes the one that ended last, wherever it is in the list', () => {
+    const picked = latestJob([job('a', '2014-11', '2015-11'), job('b', '2025-01', '2026-08'), job('c', '2023-02', '2025-01')])
+    expect(picked?.item.id).toBe('b')
+    expect(picked?.current).toBe(false)
+  })
+
+  it('with no jobs, it does not claim one', () => {
+    expect(draftLetter(withJobs([]), input).opening).toContain('Cuento con experiencia')
   })
 })

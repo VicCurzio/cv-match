@@ -11,6 +11,7 @@ import type { ResumeState } from '@/domain/resume/useResume'
 import { versionLabel } from '@/domain/resume/versions'
 import { ImportDialog } from '@/screens/import/ImportDialog'
 import { LetterDialog } from '@/screens/letter/LetterDialog'
+import { RecoveryNotice } from '@/screens/recovery/RecoveryNotice'
 import { ReviewPanel } from '@/screens/review/ReviewPanel'
 import { isRecord, paths, previewPageFrom } from '@/screens/routes'
 import { Button } from '@/shared/ui/Button'
@@ -229,28 +230,7 @@ export function EditorScreen({ state }: { state: ResumeState }) {
         autosave writes over it. It is the one failure in this app that destroys
         work, and it used to happen without a word on screen.
       */}
-      {unreadable ? (
-        <Notice tone="warning" live>
-          {copy.recovery.unreadable}
-          <span className="mt-2 flex flex-wrap gap-2">
-            <Button
-              size="sm"
-              onClick={() => {
-                downloadBlob(
-                  new Blob([unreadable], { type: 'application/json' }),
-                  copy.recovery.fileName,
-                )
-                dismissUnreadable()
-              }}
-            >
-              {copy.recovery.download}
-            </Button>
-            <Button size="sm" variant="ghost" onClick={dismissUnreadable}>
-              {copy.recovery.dismiss}
-            </Button>
-          </span>
-        </Notice>
-      ) : null}
+      {unreadable ? <RecoveryNotice unreadable={unreadable} onDismiss={dismissUnreadable} /> : null}
 
       {state.changedElsewhere ? (
         <Notice tone="warning" live>

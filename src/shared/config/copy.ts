@@ -72,6 +72,7 @@ export const copy = {
       'Un nivel solo promete las cuatro cosas. Si leés bien pero hablás poco, marcá lectura y comprensión: es más creíble y dice lo que sí sabés hacer.',
     languagePreview: 'En el CV sale:',
     remove: 'Quitar',
+    dateInvalid: (example: string) => `Todavía no se guarda: usá el formato ${example}.`,
     currentJob: 'Trabajo acá actualmente',
     personalData: 'Datos personales (opcionales)',
     personalDataHint:
