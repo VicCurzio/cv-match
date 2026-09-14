@@ -19,6 +19,7 @@ import { Notice } from '@/shared/ui/Card'
 import { copy } from '@/shared/config/copy'
 import { listOf } from '@/shared/utils/text'
 import { resumeFileName } from '@/templates/buildPdf'
+import { copyFileName } from '@/templates/shared/format'
 import { PdfLightbox, PdfPagePlaceholder, PdfPages } from './PdfPages'
 import { usePdfDocument } from './usePdfDocument'
 import { ResumeForm } from './ResumeForm'
@@ -286,7 +287,7 @@ export function EditorScreen({ state }: { state: ResumeState }) {
               <Download />
               {preview.building ? copy.editor.building : copy.editor.download}
             </Button>
-            <Button onClick={() => downloadJson(exportCv(state.currentCv()), 'cv-match.json')}>
+            <Button onClick={() => downloadJson(exportCv(state.currentCv()), copyFileName(base.personal.fullName))}>
               <FileJson />
               {copy.editor.exportJson}
             </Button>

@@ -6,7 +6,7 @@ import { useResume } from '@/domain/resume/useResume'
 import { NotFoundScreen } from '@/screens/not-found/NotFoundScreen'
 import { VERSION_ROUTE, editorAccess, paths, resumePath } from '@/screens/routes'
 import { StartScreen } from '@/screens/start/StartScreen'
-import { copy } from '@/shared/config/copy'
+import { copyFileName } from '@/templates/shared/format'
 
 /*
  * The editor is loaded when someone gets to it, not with the start screen. It
@@ -82,7 +82,7 @@ export default function App() {
             onDismissUnreadable={state.dismissUnreadable}
             onBackup={(cv) => {
               const saved = state.findCv(cv.id)
-              if (saved) downloadJson(exportCv(saved), copy.start.backupFileName)
+              if (saved) downloadJson(exportCv(saved), copyFileName(saved.resumes.es.personal.fullName))
             }}
             onDelete={(cv) => state.deleteCv(cv.id)}
             onStart={(settings) => {

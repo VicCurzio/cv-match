@@ -116,7 +116,7 @@ export const librarySchema = z.object({
 export type StoredLibrary = z.infer<typeof librarySchema>
 
 /** A version 2 document as an entry of the library. */
-export function documentToCv(doc: StoredDocument, id: string): StoredCv {
+function documentToCv(doc: StoredDocument, id: string): StoredCv {
   const { schemaVersion: _version, ...rest } = doc
   return { ...rest, id }
 }
@@ -163,7 +163,7 @@ export function isBlankCv(cv: StoredCv): boolean {
  * Raising the number without a migration is how everyone's resume gets lost at
  * once, on a deploy, with nothing on screen.
  */
-export function upgradeDocument(json: unknown): StoredDocument | null {
+function upgradeDocument(json: unknown): StoredDocument | null {
   const current = documentSchema.safeParse(json)
   if (current.success) return current.data
 
@@ -336,14 +336,6 @@ export function readBackup(): string | null {
 export function clearBackup(): void {
   try {
     localStorage.removeItem(BACKUP_KEY)
-  } catch {
-    /* nothing to clear if storage is unavailable */
-  }
-}
-
-export function clearDocument(): void {
-  try {
-    localStorage.removeItem(STORAGE_KEY)
   } catch {
     /* nothing to clear if storage is unavailable */
   }

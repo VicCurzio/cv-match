@@ -71,6 +71,16 @@ export function fileName(resume: Resume, company?: string, kind: 'CV' | 'Carta' 
   return target ? `${name}-${kind}-${target}.pdf` : `${name}-${kind}.pdf`
 }
 
+/**
+ * `cv-match-Laura-Perez.json`. With several resumes in one browser, every copy
+ * used to download as the same `cv-match.json`, and a downloads folder with
+ * three of them says nothing about whose each one is.
+ */
+export function copyFileName(fullName: string): string {
+  const name = slug(fullName)
+  return name ? `cv-match-${name}.json` : 'cv-match-copia.json'
+}
+
 export const ABILITY_LABEL: Record<LanguageAbility, string> = {
   reading: 'lectura',
   listening: 'comprensión oral',

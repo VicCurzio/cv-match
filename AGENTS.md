@@ -16,7 +16,7 @@ npm run test:e2e
 
 Playwright contra el build de producción. Un flujo nuevo (una pantalla, una ruta, un diálogo que guarda algo) lleva su escenario en `e2e/`, con datos sembrados desde `e2e/fixtures.ts` y nunca con el código de la app.
 
-## Las cuatro cosas que no hay que romper
+## Las cinco cosas que no hay que romper
 
 **1. El CV no sale de la máquina del usuario.** No hay backend, no hay analítica, no hay `fetch` a ningún lado. Si una tarea parece necesitar una llamada de red, la respuesta por defecto es que no, y si de verdad hace falta se avisa en pantalla **antes** de mandar nada.
 
@@ -25,6 +25,8 @@ Playwright contra el build de producción. Un flujo nuevo (una pantalla, una rut
 **3. El filtrado de campos prohibidos ocurre en un solo lugar.** `applyProfile()` en `domain/market/marketProfile.ts`. Una plantilla **nunca** pregunta si un campo está permitido: recibe el CV ya filtrado. Si ves un `if (profile.fields...)` dentro de `templates/`, eso es el bug.
 
 **4. Un hallazgo sin acción no se muestra.** Toda regla de `domain/analysis` devuelve qué está mal **y qué hacer**. Un diagnóstico que solo señala no sirve.
+
+**5. Lo guardado se migra, nunca se invalida.** Lo que la app guarda en el navegador es la única copia del CV de alguien. Si cambiás su forma (`librarySchema` en `domain/resume/storage.ts`), subí `LIBRARY_VERSION` y agregá el paso en `upgradeLibrary`: un `schemaVersion` que ya no valida manda el CV de todos a la copia de ilegibles en el próximo deploy. `storage.test.ts` tiene documentos de cada versión anterior y un control que comprueba que el esquema actual solo los rechaza; sumá el nuevo formato ahí.
 
 ## La regla de capas
 

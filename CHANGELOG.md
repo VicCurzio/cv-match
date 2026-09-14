@@ -5,6 +5,15 @@ Versionado según [SemVer](https://semver.org/lang/es/).
 
 ## [No publicado]
 
+### Cambiado
+
+- Las copias `.json` se descargan con el nombre de la persona (`cv-match-Laura-Perez.json`). Con varios CV, todas se llamaban `cv-match.json` y en la carpeta de descargas no se sabía de quién era cada una.
+
+### Mantenimiento
+
+- Se quitó código sin uso (`clearDocument`, un tipo de carta duplicado) y dos funciones del guardado que solo se usaban adentro dejaron de exportarse.
+- README y `AGENTS.md` al día: la base de Vite es `/cv-match/` (el README todavía decía `./`), por qué sigue `frame-src blob:`, el dominio `posting`, la cobertura real de los tests de punta a punta, y una regla nueva para agentes: cambiar la forma de lo guardado obliga a migrar.
+
 ## [1.0.0] - 2026-09-14
 
 Primera versión con número. Todo lo que sigue estuvo publicado en GitHub Pages a medida que se hizo, desde el 2026-09-06; esta entrada lo agrupa. Lo que sigue es, en orden inverso, cómo se llegó hasta acá.

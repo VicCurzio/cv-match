@@ -56,7 +56,7 @@ Sitio estático, publicado en GitHub Pages por `.github/workflows/deploy.yml` en
 
 Para conectarlo la primera vez: creá el repositorio en GitHub, agregalo como remoto, `git push -u origin main`, y en Settings → Pages elegí **GitHub Actions** como origen. Hasta que ese último paso esté hecho, el workflow de deploy falla con `Get Pages site failed`.
 
-`base` está en `./` para que el sitio funcione desde un subdirectorio, que es como Pages sirve un proyecto.
+`base` es `/cv-match/`, absoluta a propósito: con `./`, recargar en una dirección interna como `/cv-match/editor` pide los scripts en una carpeta que no existe y la página queda en blanco. El build copia `index.html` a `404.html`, que es lo que deja a Pages servir la app en cualquier dirección.
 
 ## Privacidad, y cómo se hace cumplir
 
@@ -71,7 +71,7 @@ Si tocás esa política, **probala sobre el sitio construido**, no sobre el serv
 | Directiva | Por qué |
 |---|---|
 | `'wasm-unsafe-eval'` | `@react-pdf/renderer` compila un módulo WebAssembly para maquetar el texto. Sin esto el PDF no se arma. Permite WebAssembly y nada más: `eval` y `new Function` siguen bloqueados |
-| `frame-src blob:` | La vista previa muestra el PDF generado como blob URL |
+| `frame-src blob:` | Respaldo: si pdfjs no carga, la vista previa cae al visor del navegador sobre el PDF como blob URL |
 | `worker-src blob:` | pdfjs cae a un worker de tipo blob |
 | `img-src data:` | La foto de perfil se guarda como data URL |
 | `style-src 'unsafe-inline'` | React escribe atributos `style` |
@@ -98,7 +98,7 @@ screens  ---------------->  domain
 ```
 src/
   screens/     una carpeta por pantalla
-  domain/      resume · market · analysis · photo · letter · export · ingest · generate
+  domain/      resume · market · analysis · posting · photo · letter · export · ingest · generate
   templates/   harvard/ y modern/, dibujadas con react-pdf
   shared/      ui · utils · config
 ```
@@ -136,7 +136,7 @@ Se testea el núcleo, no la interfaz:
 - La validación del `.json` importado, y qué pasa con uno guardado que ya no se puede leer.
 - Un control que se verifica a sí mismo: un CV que el modo ATS **tiene** que rechazar.
 - Las versiones: base más capa, que un cambio del base llegue a todas, que la capa no tenga dónde guardar un hecho, y que una viñeta reescrita con un número distinto no se exporte.
-- La migración del documento guardado: uno de la versión 1 carga entero, y el esquema actual solo lo rechaza (así el test prueba la migración y no la tolerancia del esquema).
+- La migración de lo guardado: documentos de las versiones 1 y 2 cargan enteros como una biblioteca de un CV, y el esquema actual solo los rechaza (así el test prueba la migración y no la tolerancia del esquema).
 - Comparar con el aviso, contra el texto de un aviso real.
 - Las direcciones y quién puede entrar al editor (`screens/routes.ts`), y el tamaño con que se dibuja cada hoja de la vista previa.
 
@@ -148,7 +148,7 @@ Lo que solo existe en el sitio construido lo verifica `npm run check:build` en e
 npm run test:e2e
 ```
 
-Playwright con Chromium, contra el **build de producción** servido por `vite preview`, no contra el servidor de desarrollo: la política de seguridad, la ruta base y la carga diferida del editor solo existen construidos, y cada una rompió algo en este proyecto que en desarrollo no se veía. Cubre lo que una persona hace: responder el inicio y moverse con Atrás y Adelante, crear, recargar y borrar versiones, la comparación con el aviso y las viñetas con números, la vista previa dibujada y su vista ampliada, dos pestañas sobre el mismo CV, empezar uno nuevo con copia, un CV guardado con el formato viejo y el ancho de un celular.
+Playwright con Chromium, contra el **build de producción** servido por `vite preview`, no contra el servidor de desarrollo: la política de seguridad, la ruta base y la carga diferida del editor solo existen construidos, y cada una rompió algo en este proyecto que en desarrollo no se veía. Cubre lo que una persona hace: responder el inicio y moverse con Atrás y Adelante, crear, recargar y borrar versiones, la comparación con el aviso y las viñetas con números, la vista previa dibujada y su vista ampliada, dos pestañas sobre el mismo CV, varios CV a la vez (empezar otro, cambiar entre ellos, borrar con copia, cargar copias), la carta del CV base tras recargar, fechas a medio escribir, un CV guardado con formato viejo o ilegible, y el ancho de un celular.
 
 Los datos de prueba se escriben en `localStorage` antes del primer script de la página (`e2e/fixtures.ts`) y con la forma que guarda la app, sin usar su código: un documento armado con las mismas funciones que se están probando cambiaría junto con el bug.
 

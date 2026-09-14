@@ -37,7 +37,6 @@ export const copy = {
     backupAndDelete: 'Bajar copia y borrar',
     deleteWithoutBackup: 'Borrar sin copia',
     cancel: 'Cancelar',
-    backupFileName: 'cv-match-copia.json',
   },
 
   editor: {

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { cleanAr } from '@/test/fixtures'
-import { fileName, languageLevel } from './format'
+import { copyFileName, fileName, languageLevel } from './format'
 
 describe('file names', () => {
   it('names the base resume after the person', () => {
@@ -55,5 +55,16 @@ describe('language level', () => {
    */
   it('never uses a middle dot as a separator', () => {
     expect(languageLevel({ ...english, abilities: ['reading'] })).not.toContain('·')
+  })
+})
+
+describe('copy file names', () => {
+  it('say whose resume the copy is', () => {
+    expect(copyFileName('Laura Pérez')).toBe('cv-match-Laura-Pérez.json')
+  })
+
+  it('fall back to a neutral name for a resume with no name yet', () => {
+    expect(copyFileName('')).toBe('cv-match-copia.json')
+    expect(copyFileName('  ')).toBe('cv-match-copia.json')
   })
 })

@@ -59,8 +59,6 @@ export const letterDraftSchema = z.strictObject({
   body: z.string(),
 })
 
-export type LetterDraft = z.infer<typeof letterDraftSchema>
-
 export const versionSchema = z.strictObject({
   id: z.string(),
   company: z.string(),
