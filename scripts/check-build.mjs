@@ -42,6 +42,21 @@ export function problemsIn(dir) {
     if (!url.startsWith(BASE)) problems.push(`URL "${url}" does not start with ${BASE}`)
   }
 
+  /*
+   * The share image is referenced by an absolute URL, which the relative-URL
+   * check above does not look at -- and a card that points at a missing file
+   * shows a broken preview in every chat it is pasted into.
+   */
+  const SITE = 'https://viccurzio.github.io' + BASE
+  for (const match of html.matchAll(/(?:property|name)="(?:og:image|twitter:image)"\s+content="([^"]+)"/g)) {
+    const url = match[1]
+    if (!url.startsWith(SITE)) {
+      problems.push(`share image "${url}" is not under ${SITE}`)
+      continue
+    }
+    if (!existsSync(join(dir, url.slice(SITE.length)))) problems.push(`share image "${url}" is not in the build`)
+  }
+
   return problems
 }
 
@@ -50,18 +65,19 @@ function selfTest() {
   try {
     writeFileSync(
       join(dir, 'index.html'),
-      '<link rel="icon" href="./favicon.svg" /><script type="module" src="/cv-match/assets/index.js"></script>',
+      '<link rel="icon" href="./favicon.svg" /><meta property="og:image" content="https://viccurzio.github.io/cv-match/missing.png" /><script type="module" src="/cv-match/assets/index.js"></script>',
     )
     const found = problemsIn(dir)
     const caughtFallback = found.some((p) => p.includes('404.html is missing'))
     // The script is fine here on purpose: only the favicon is wrong, which is
     // the exact case the first version of this check let through.
     const caughtRelative = found.some((p) => p.includes('"./favicon.svg"'))
-    if (!caughtFallback || !caughtRelative) {
+    const caughtImage = found.some((p) => p.includes('missing.png') && p.includes('not in the build'))
+    if (!caughtFallback || !caughtRelative || !caughtImage) {
       console.error('check-build self-test FAILED: a broken build passed.', found)
       process.exit(1)
     }
-    console.log('check-build self-test passed: a build without 404.html and with a relative favicon is rejected.')
+    console.log('check-build self-test passed: a build without 404.html, with a relative favicon and a missing share image is rejected.')
   } finally {
     rmSync(dir, { recursive: true, force: true })
   }

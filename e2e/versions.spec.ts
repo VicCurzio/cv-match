@@ -34,7 +34,10 @@ test('a correction in the base reaches the version, which does not store it', as
   await page.goto('editor')
 
   await page.getByLabel('Nombre y apellido').fill('Laura Perez Gómez')
+  // Marked outside React: if moving to the version rebuilt the editor, the mark is gone.
+  await page.locator('header').first().evaluate((header) => header.setAttribute('data-e2e', 'kept'))
   await page.getByLabel('Qué CV estás viendo').selectOption({ label: 'Para Empresa A' })
+  await expect(page.locator('header[data-e2e="kept"]')).toHaveCount(1)
   await expect(page).toHaveURL(/\/editor\/versions\/ver-a$/)
   await expect(page.getByRole('heading', { name: 'Laura Perez Gómez' })).toBeVisible()
 

@@ -1,6 +1,6 @@
 import { z } from 'zod'
-import { emptyResume, resumeSchema, type Resume } from './resumeSchema'
-import { settingsSchema } from './settings'
+import { emptyResume, resumeSchema } from './resumeSchema'
+import { defaultSettings, settingsSchema } from './settings'
 import { versionSchema } from './versions'
 
 /**
@@ -12,7 +12,7 @@ import { versionSchema } from './versions'
 const STORAGE_KEY = 'cv-match:document'
 
 /**
- * Whether a `storage` event is about the saved document. The browser fires it
+ * Whether a `storage` event is about the saved library. The browser fires it
  * only in the OTHER tabs of the same site, never in the one that wrote, and with
  * a `null` key when storage was cleared altogether -- which also counts.
  */
@@ -34,8 +34,11 @@ const BACKUP_KEY = 'cv-match:unreadable'
 export { defaultSettings, settingsSchema, type Settings } from './settings'
 import type { Settings } from './settings'
 
-/** The shape of what is saved. Bumped when that shape changes, never silently. */
+/** The shape of one resume as version 2 saved it, and as older copies still carry it. */
 export const DOCUMENT_VERSION = 2
+
+/** The shape of what is saved now: several resumes. Bumped when that shape changes, never silently. */
+export const LIBRARY_VERSION = 3
 
 const localizedResumes = z.object({
   es: resumeSchema,
@@ -54,12 +57,13 @@ const documentV1Schema = z.object({
 })
 
 /**
+ * Version 2: one resume and its versions. Still read -- from browsers that have
+ * not opened the app since, and from every `.json` copy downloaded before
+ * version 3 -- and upgraded on the way in.
+ *
  * The envelope carries a resume per locale even though only `es` exists today.
  * Translation (feature 0009) needs a second version, and adding it to the shape
  * later would mean migrating whatever people already have saved.
- *
- * Version 2 adds the versions aimed at job postings (feature 0011). `settings`
- * and `resumes` are the BASE: the facts, and how the base is exported.
  */
 export const documentSchema = z.object({
   schemaVersion: z.literal(DOCUMENT_VERSION),
@@ -74,27 +78,53 @@ export const documentSchema = z.object({
 export type StoredDocument = z.infer<typeof documentSchema>
 
 /**
- * Whether a saved document holds nothing the person wrote.
- *
- * The autosave runs from the first render, so a first visit that only looked at
- * the start screen leaves an empty document behind. Treating that as "a saved
- * resume" greeted the next visit with "Tenés un CV guardado · Sin nombre
- * todavía", and "Empezar uno nuevo" asked to confirm replacing nothing.
+ * The base's own cover letter. A version keeps its letter with the version,
+ * because a letter belongs to a posting; the base had nowhere to keep one, so a
+ * paragraph written without a version was gone on reload.
  */
-export function isBlankDocument(doc: StoredDocument): boolean {
-  return (
-    doc.versions.length === 0 && JSON.stringify(doc.resumes.es) === JSON.stringify(emptyResume())
-  )
-}
+export const baseLetterSchema = z.strictObject({
+  role: z.string(),
+  company: z.string(),
+  recipient: z.string(),
+  body: z.string(),
+})
+
+export type BaseLetter = z.infer<typeof baseLetterSchema>
+
+/** One resume in the library: a version 2 document with an id, and its base letter. */
+export const cvSchema = documentSchema.omit({ schemaVersion: true }).extend({
+  id: z.string(),
+  letter: baseLetterSchema.optional(),
+})
+
+export type StoredCv = z.infer<typeof cvSchema>
 
 /**
- * A new, empty document with the start screen's answers: what "Empezar uno
- * nuevo" puts in place of whatever was saved. No resume, no versions, the base
- * selected.
+ * Version 3: several resumes in one browser (feature 0014).
+ *
+ * Before it, starting a second person's resume -- your own and then a
+ * relative's -- meant replacing the first one. The library keeps all of them
+ * and remembers which one was open.
  */
-export function freshDocument(settings: Settings): StoredDocument {
+export const librarySchema = z.object({
+  schemaVersion: z.literal(LIBRARY_VERSION),
+  /** `null` when there is none yet. An id that matches no resume opens the first. */
+  activeCvId: z.string().nullable(),
+  cvs: z.array(cvSchema),
+})
+
+export type StoredLibrary = z.infer<typeof librarySchema>
+
+/** A version 2 document as an entry of the library. */
+export function documentToCv(doc: StoredDocument, id: string): StoredCv {
+  const { schemaVersion: _version, ...rest } = doc
+  return { ...rest, id }
+}
+
+/** A new, empty resume with the start screen's answers. */
+export function freshCv(id: string, settings: Settings): StoredCv {
   return {
-    schemaVersion: DOCUMENT_VERSION,
+    id,
     settings: { ...settings },
     activeLocale: 'es',
     resumes: { es: emptyResume() },
@@ -104,37 +134,34 @@ export function freshDocument(settings: Settings): StoredDocument {
 }
 
 /**
- * Whether a document written by another tab says something different from this
- * tab's copy.
+ * Whether a resume holds nothing the person wrote.
  *
- * Which version is open is left out: it is saved with the document, so just
- * opening a version in one tab rewrites storage, and comparing it would tell
- * every other tab "this resume changed elsewhere" when nobody had touched it.
- * Text that is not a readable document counts as a change -- when in doubt,
- * stop saving rather than write over it.
+ * The autosave runs from the first render, so a first visit that only looked at
+ * the start screen leaves an empty resume behind -- and "Empezar uno nuevo"
+ * followed by closing the tab leaves another. Blank resumes are not listed and
+ * not kept: a library full of "Sin nombre" is noise that hides the real ones.
  */
-export function differsFrom(current: StoredDocument, written: string | null): boolean {
-  if (written === null) return true
-  let other: StoredDocument | null
-  try {
-    other = upgradeDocument(JSON.parse(written))
-  } catch {
-    return true
-  }
-  if (!other) return true
-  const content = (doc: StoredDocument) => JSON.stringify({ ...doc, activeVersionId: null })
-  return content(other) !== content(current)
+export function isBlankCv(cv: StoredCv): boolean {
+  const letter = cv.letter
+  const letterBlank =
+    !letter || [letter.role, letter.company, letter.recipient, letter.body].every((text) => !text.trim())
+  return (
+    letterBlank &&
+    cv.versions.length === 0 &&
+    JSON.stringify(cv.resumes.es) === JSON.stringify(emptyResume())
+  )
 }
 
 /**
- * Reads any document this app has ever written, upgraded to the current shape.
+ * Reads any document this app has ever written, upgraded to the version 2
+ * single-resume shape. Kept for version 1 and 2 data; `upgradeLibrary` builds
+ * on it.
  *
- * `schemaVersion` is a literal, so without this step the day the number went
+ * `schemaVersion` is a literal, so without these steps the day the number went
  * up every resume already saved would stop validating -- and a document that
  * does not validate is set aside as unreadable and replaced by the autosave.
  * Raising the number without a migration is how everyone's resume gets lost at
- * once, on a deploy, with nothing on screen. `storage.test.ts` holds a real v1
- * document and fails if this is removed.
+ * once, on a deploy, with nothing on screen.
  */
 export function upgradeDocument(json: unknown): StoredDocument | null {
   const current = documentSchema.safeParse(json)
@@ -148,6 +175,66 @@ export function upgradeDocument(json: unknown): StoredDocument | null {
   return null
 }
 
+/** The id the single resume of an upgraded version 1 or 2 document gets. */
+export const FIRST_CV_ID = 'cv-1'
+
+/**
+ * Reads anything this app has ever saved as the current library. A version 1 or
+ * 2 document becomes a library of one. `storage.test.ts` holds real documents of
+ * every older version and fails if a step is removed.
+ */
+export function upgradeLibrary(json: unknown): StoredLibrary | null {
+  const current = librarySchema.safeParse(json)
+  if (current.success) return current.data
+
+  const single = upgradeDocument(json)
+  if (single) {
+    return { schemaVersion: LIBRARY_VERSION, activeCvId: FIRST_CV_ID, cvs: [documentToCv(single, FIRST_CV_ID)] }
+  }
+
+  return null
+}
+
+/**
+ * Whether a library written by another tab says something different from this
+ * tab's copy.
+ *
+ * Which resume and which version are open are left out: both are saved, so just
+ * opening one in a tab rewrites storage, and comparing them would tell every
+ * other tab "this resume changed elsewhere" when nobody had touched it. Text
+ * that is not a readable library counts as a change -- when in doubt, stop
+ * saving rather than write over it.
+ */
+export function differsFrom(current: StoredLibrary, written: string | null): boolean {
+  if (written === null) return true
+  let other: StoredLibrary | null
+  try {
+    other = upgradeLibrary(JSON.parse(written))
+  } catch {
+    return true
+  }
+  if (!other) return true
+  /*
+   * Both sides go through the schema first. What was read back comes out in the
+   * schema's key order and this tab's copy in whatever order it was built, and
+   * comparing the two strings as they were reported a change on every write.
+   */
+  const content = (library: StoredLibrary) => {
+    const normal = librarySchema.parse(library)
+    return JSON.stringify({
+      ...normal,
+      activeCvId: null,
+      cvs: normal.cvs.map((cv) => ({ ...cv, activeVersionId: null })),
+    })
+  }
+  return content(other) !== content(current)
+}
+
+/** A downloaded copy of one resume: a library of one, so the file reads back as it is saved. */
+export function exportCv(cv: StoredCv): StoredLibrary {
+  return { schemaVersion: LIBRARY_VERSION, activeCvId: cv.id, cvs: [cv] }
+}
+
 export type SaveResult =
   | { ok: true }
   | { ok: false; reason: 'quota' | 'unavailable'; message: string }
@@ -158,9 +245,9 @@ export type SaveResult =
  * app looks fine until the tab reloads and the resume is gone. So the result is
  * returned rather than thrown away.
  */
-export function saveDocument(doc: StoredDocument): SaveResult {
+export function saveLibrary(library: StoredLibrary): SaveResult {
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(doc))
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(library))
     return { ok: true }
   } catch (error) {
     const isQuota =
@@ -171,7 +258,7 @@ export function saveDocument(doc: StoredDocument): SaveResult {
         ok: false,
         reason: 'quota',
         message:
-          'No entra en el almacenamiento del navegador. Quitá la foto o acortá el texto y volvé a intentar.',
+          'No entra en el almacenamiento del navegador. Quitá una foto, borrá un CV que ya no uses o acortá el texto, y volvé a intentar.',
       }
     }
     return {
@@ -186,17 +273,17 @@ export function saveDocument(doc: StoredDocument): SaveResult {
 export type LoadResult =
   /** Nothing saved, or storage is unreachable: a legitimate blank start. */
   | { status: 'empty' }
-  | { status: 'ok'; doc: StoredDocument }
+  | { status: 'ok'; library: StoredLibrary }
   /** Something was saved and cannot be read. The raw text comes back so it can
    *  be handed to the person instead of being overwritten. */
   | { status: 'unreadable'; raw: string }
 
 /**
- * Reads the saved document, telling "there is nothing" apart from "there is
+ * Reads the saved library, telling "there is nothing" apart from "there is
  * something I cannot read". Those two used to be the same answer, and the
  * second one silently cost the resume.
  */
-export function loadDocument(): LoadResult {
+export function loadLibrary(): LoadResult {
   let raw: string | null = null
   try {
     raw = localStorage.getItem(STORAGE_KEY)
@@ -212,8 +299,8 @@ export function loadDocument(): LoadResult {
     return unreadable(raw)
   }
 
-  const doc = upgradeDocument(parsed)
-  return doc ? { status: 'ok', doc } : unreadable(raw)
+  const library = upgradeLibrary(parsed)
+  return library ? { status: 'ok', library } : unreadable(raw)
 }
 
 /**
@@ -263,47 +350,21 @@ export function clearDocument(): void {
 }
 
 export type ImportResult =
-  /** `document` is there when the file was a whole export, versions included. */
-  | { ok: true; resume: Resume; document?: StoredDocument }
+  /** The resumes the file holds, ready to be added. Their ids are replaced when added. */
+  | { ok: true; cvs: StoredCv[] }
   | { ok: false; message: string }
 
-export type ImportedFile = Extract<ImportResult, { ok: true }>
-
-export interface ImportPlan {
-  /**
-   * A whole export replaces everything, versions included. A bare resume
-   * replaces only the base's facts, and the versions stay layered on top.
-   */
-  scope: 'document' | 'base'
-  current: { fullName: string; versions: number }
-  incoming: { fullName: string; versions: number }
-  /** Nothing to lose when what is open is blank: load it without asking. */
-  needsConfirmation: boolean
-}
-
 /**
- * What loading a copy would do to what is open, said before doing it.
+ * Reads a `.json` copy. Anything read from a file is validated before it reaches
+ * app state.
  *
- * "Cargar copia (.json)" used to replace the resume -- and, with a whole
- * export, every version -- the moment the file was chosen. Picking the wrong
- * file from a downloads folder full of `cv-match-copia.json` and friends was
- * enough to lose an afternoon of adapting, with no way back.
+ * Accepts every shape this app has written -- a library, a version 2 or 1
+ * document -- and a bare resume. Loading a copy ADDS what it holds to the
+ * library instead of replacing what is open: with several resumes kept, there
+ * is no reason for a copy to overwrite anything, and picking the wrong file
+ * costs nothing.
  */
-export function importPlan(current: StoredDocument, file: ImportedFile): ImportPlan {
-  const scope = file.document ? 'document' : 'base'
-  return {
-    scope,
-    current: { fullName: current.resumes.es.personal.fullName, versions: current.versions.length },
-    incoming: {
-      fullName: file.resume.personal.fullName,
-      versions: file.document ? file.document.versions.length : current.versions.length,
-    },
-    needsConfirmation: !isBlankDocument(current),
-  }
-}
-
-/** Anything read from a file is validated before it reaches app state. */
-export function parseResumeJson(text: string): ImportResult {
+export function parseCopy(text: string): ImportResult {
   let json: unknown
   try {
     json = JSON.parse(text)
@@ -311,16 +372,18 @@ export function parseResumeJson(text: string): ImportResult {
     return { ok: false, message: 'El archivo no es un .json válido.' }
   }
 
-  /*
-   * Accept both a bare resume and a full exported document. The document comes
-   * back whole: returning only `resumes.es`, as this did before versions, would
-   * import someone's file and throw their versions away without a word.
-   */
-  const asDocument = upgradeDocument(json)
-  if (asDocument) return { ok: true, resume: asDocument.resumes.es, document: asDocument }
+  const asLibrary = upgradeLibrary(json)
+  if (asLibrary) {
+    const cvs = asLibrary.cvs.filter((cv) => !isBlankCv(cv))
+    return cvs.length > 0
+      ? { ok: true, cvs }
+      : { ok: false, message: 'La copia no tiene ningún CV con datos.' }
+  }
 
   const asResume = resumeSchema.safeParse(json)
-  if (asResume.success) return { ok: true, resume: asResume.data }
+  if (asResume.success) {
+    return { ok: true, cvs: [{ ...freshCv(FIRST_CV_ID, defaultSettings()), resumes: { es: asResume.data } }] }
+  }
 
   return {
     ok: false,

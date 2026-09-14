@@ -5,6 +5,29 @@ Versionado según [SemVer](https://semver.org/lang/es/).
 
 ## [No publicado]
 
+## [1.0.0] - 2026-09-14
+
+Primera versión con número. Todo lo que sigue estuvo publicado en GitHub Pages a medida que se hizo, desde el 2026-09-06; esta entrada lo agrupa. Lo que sigue es, en orden inverso, cómo se llegó hasta acá.
+
+### Agregado: varios CV a la vez (probado de punta a punta)
+
+- **El inicio lista "Tus CV en este navegador"**, cada uno con sus versiones, para abrir o borrar. "Empezar uno nuevo" **agrega** un CV al lado de los que ya hay: armar el de otra persona ya no obliga a reemplazar el propio.
+- **Borrar un CV pregunta** y ofrece bajar una copia de ese CV antes.
+- **"Cargar copia (.json)" agrega** lo que trae el archivo como un CV aparte, sin tocar el abierto. Por eso se quitaron las confirmaciones de "Empezar uno nuevo" y de cargar una copia que se habían sumado antes: ya no se reemplaza nada.
+- En el editor, "Mis CV" vuelve a la lista.
+- Los CV vacíos no se listan ni se guardan.
+- **El guardado pasa a la versión 3 del formato**, una biblioteca de CV. Lo guardado con las versiones 1 y 2, y cualquier copia `.json` bajada antes, se lee y se convierte: un documento viejo pasa a ser el primer CV de la lista.
+
+### Agregado
+
+- **La carta de presentación del CV base se guarda.** Antes solo la de una versión sobrevivía a una recarga.
+- **Imagen para compartir el link** (1200×630) y un **ícono propio**: el de la pestaña seguía siendo el logo de Vite de la plantilla inicial. `check:build` verifica que la imagen esté en el build.
+
+### Arreglado
+
+- **Cargar una copia desde una versión desmontaba el editor.** React Router aplica los cambios de dirección como transición, detrás de los cambios de estado; durante un instante el CV nuevo se veía con la dirección de una versión del anterior, la redirección reemplazaba al editor y se reconstruía: la vista previa se redibujaba de cero y el aviso de "Copia cargada" se perdía. La redirección ahora se dibuja al lado del editor.
+- La comparación del aviso de "otra pestaña" normaliza los dos lados por el esquema antes de comparar: con el formato nuevo, el orden de las claves difería y habría avisado en cada guardado. Lo encontró un test unitario.
+
 ### Arreglado (tercera revisión)
 
 - **Una fecha a medio escribir hacía perder el CV.** El formulario guardaba lo tipeado tal cual; con "2024-1" en una fecha y la pestaña cerrada, el documento guardado no pasaba la validación al volver, se apartaba como ilegible y la app arrancaba en blanco. Ahora las fechas se guardan recién cuando están completas, el campo dice "Todavía no se guarda: usá el formato 2021-03" y el CV conserva la última fecha buena. El test de punta a punta se escribió primero y falló antes del arreglo.
@@ -204,3 +227,6 @@ Versionado según [SemVer](https://semver.org/lang/es/).
 - Guardado automático en el navegador, y exportar e importar el CV como `.json` validado con zod.
 - Verificación de la regla de capas con autoverificación (`scripts/check-layers.mjs`).
 - Tests del núcleo con Vitest: motor de reglas contra fixtures, cruce de mercados, validación del `.json` y un control que se verifica a sí mismo.
+
+[No publicado]: https://github.com/VicCurzio/cv-match/compare/v1.0.0...HEAD
+[1.0.0]: https://github.com/VicCurzio/cv-match/releases/tag/v1.0.0

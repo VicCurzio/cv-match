@@ -8,12 +8,13 @@ Todo corre en el navegador. No hay backend, no hay cuentas y el CV no se sube a 
 
 ## Qué resuelve
 
-La mayoría no sabe maquetar un CV, ni qué sacarle, ni que el CV que sirve en Argentina no es el que sirve afuera. CV Match hace cuatro cosas:
+La mayoría no sabe maquetar un CV, ni qué sacarle, ni que el CV que sirve en Argentina no es el que sirve afuera. CV Match hace cinco cosas:
 
 1. **Lo maqueta.** Dos plantillas, cada una con un propósito declarado.
 2. **Lo adapta al mercado.** En Argentina la foto se usa; en Estados Unidos, Reino Unido y Canadá hay reclutadores que descartan los CV con foto para no exponerse a una acusación de discriminación. La app lo sabe y filtra en consecuencia.
 3. **Lo diagnostica.** Un motor de reglas señala qué está flojo y **qué hacer** al respecto.
-4. **Lo adapta a cada aviso.** Una versión por postulación cambia el titular, el perfil, el orden de las habilidades y qué se muestra, sin tocar los hechos: puestos, fechas y números viven una sola vez en el CV base, así que lo que se corrige ahí llega a todas las versiones. Cada versión muestra qué palabras del aviso el CV todavía no menciona, como lista para revisar y no como puntaje.
+4. **Guarda varios CV a la vez.** El tuyo y el de un familiar, cada uno con sus versiones y sus cartas, en el mismo navegador.
+5. **Lo adapta a cada aviso.** Una versión por postulación cambia el titular, el perfil, el orden de las habilidades y qué se muestra, sin tocar los hechos: puestos, fechas y números viven una sola vez en el CV base, así que lo que se corrige ahí llega a todas las versiones. Cada versión muestra qué palabras del aviso el CV todavía no menciona, como lista para revisar y no como puntaje.
 
 ## Requisitos
 
@@ -165,7 +166,7 @@ Tres de ellos vale la pena conocerlos antes de tocar lo que verifican:
 
 - El editor pesa alrededor de 450 KB comprimidos, casi todo `@react-pdf/renderer`. Se descarga recién al entrar al editor: la pantalla de inicio carga unos 110 KB.
 - La foto se guarda en el navegador. El cupo total ronda los 5 MB, por eso se comprime a 600x600 antes de guardarla; sin eso una foto de celular llena el cupo y el navegador deja de guardar sin avisar.
-- Hay un solo CV por navegador. "Empezar uno nuevo" reemplaza el guardado, después de confirmar y con la opción de bajar una copia. Guardar varios a la vez (el tuyo y el de otra persona) no está hecho.
+- Los CV viven en el navegador donde se armaron. Varios conviven (el tuyo y el de otra persona), pero para pasarlos a otra computadora hay que bajar una copia `.json` y cargarla allá.
 - Comparar con el aviso compara palabras, no significados: fuera de una lista corta de equivalencias ("ATM" y "cajero"), dos palabras distintas para lo mismo aparecen como faltante.
 - El control de números de las viñetas reescritas lee cifras escritas con dígitos. Un número escrito en letras ("treinta") no se detecta.
 - La fuente del PDF es una de las estándar del formato (Helvetica y Times-Roman). Cubren los acentos y la ñ sin embeber nada. Cambiar a una fuente propia obliga a registrarla con `Font.register`.

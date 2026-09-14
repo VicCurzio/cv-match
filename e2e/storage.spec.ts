@@ -1,6 +1,12 @@
 import { readFile } from 'node:fs/promises'
 import { expect, test } from '@playwright/test'
-import { STORAGE_KEY, afterAutosave, resume, savedDocument, seed, stored, version } from './fixtures'
+import { STORAGE_KEY, afterAutosave, library, resume, savedDocument, seed, stored, version } from './fixtures'
+
+/** A version 2 document without its `schemaVersion`, as one entry of a library. */
+function withoutVersionField(document: ReturnType<typeof savedDocument>) {
+  const { schemaVersion: _schemaVersion, ...rest } = document
+  return rest
+}
 
 test('two tabs: an edit in one stops the other from writing over it', async ({ context }) => {
   const first = await context.newPage()
@@ -27,35 +33,89 @@ test('two tabs: an edit in one stops the other from writing over it', async ({ c
   expect(saved?.resumes.es.summary).not.toBe('Edición vieja.')
 })
 
-test('starting a new resume asks first, and the copy holds the old one', async ({ page }) => {
-  await seed(page, savedDocument({ versions: [version('ver-a', 'Empresa A'), version('ver-b', 'Empresa B')] }))
+test('several resumes live side by side: starting another keeps the first', async ({ page }) => {
+  await seed(page, savedDocument({ versions: [version('ver-a', 'Empresa A')] }))
   await page.goto('./')
 
-  await expect(page.getByText('Laura Pérez · 2 versiones')).toBeVisible()
-  await page.getByRole('button', { name: /Sí, va por un formulario web/ }).click()
-
+  await expect(page.getByText('Tus CV en este navegador')).toBeVisible()
+  await expect(page.getByText('1 versión')).toBeVisible()
+  await page.getByRole('button', { name: /No, lo manda por mail/ }).click()
   await page.getByRole('button', { name: 'Empezar uno nuevo' }).click()
-  const dialog = page.getByRole('dialog', { name: 'Empezar un CV nuevo' })
-  await dialog.getByRole('button', { name: 'Cancelar' }).click()
-  await expect(dialog).toHaveCount(0)
-  expect((await stored(page))?.versions).toHaveLength(2)
-
-  await page.getByRole('button', { name: 'Empezar uno nuevo' }).click()
-  const download = page.waitForEvent('download')
-  await dialog.getByRole('button', { name: 'Bajar copia y empezar' }).click()
-
-  const file = await download
-  expect(file.suggestedFilename()).toBe('cv-match-copia.json')
-  const copy = JSON.parse(await readFile((await file.path()) ?? '', 'utf8'))
-  expect(copy.resumes.es.personal.fullName).toBe('Laura Pérez')
-  expect(copy.versions).toHaveLength(2)
-
+  // Adding a resume replaces nothing, so nothing is asked.
+  await expect(page.getByRole('dialog')).toHaveCount(0)
   await expect(page).toHaveURL(/\/cv-match\/editor$/)
+
+  await page.getByLabel('Nombre y apellido').fill('Camila Prueba')
   await afterAutosave(page)
-  const now = await stored(page)
-  expect(now?.resumes.es.personal.fullName).toBe('')
-  expect(now?.versions).toEqual([])
-  expect(now?.settings).toEqual({ market: 'AR', atsMode: true, template: 'harvard' })
+  let saved = await library(page)
+  expect(saved?.cvs.map((cv) => cv.resumes.es.personal.fullName)).toEqual(['Laura Pérez', 'Camila Prueba'])
+
+  await page.getByRole('link', { name: 'Mis CV' }).click()
+  await page.getByRole('button', { name: 'Abrir el CV de Laura Pérez' }).click()
+  await expect(page.getByRole('heading', { name: 'Laura Pérez' })).toBeVisible()
+  await afterAutosave(page)
+  saved = await library(page)
+  // Switching kept what was typed in the other one.
+  expect(saved?.cvs.map((cv) => cv.resumes.es.personal.fullName)).toEqual(['Laura Pérez', 'Camila Prueba'])
+  expect((await stored(page))?.versions).toHaveLength(1)
+})
+
+test('deleting a resume asks, can keep a copy, and leaves the others', async ({ page }) => {
+  const camila = { ...savedDocument(), resumes: { es: resume({ personal: { fullName: 'Camila Prueba', headline: '', email: '', phone: '', city: '' } }) } }
+  await page.addInitScript(
+    ([key, value]) => {
+      if (sessionStorage.getItem('e2e-seeded')) return
+      localStorage.setItem(key, value)
+      sessionStorage.setItem('e2e-seeded', '1')
+    },
+    [
+      STORAGE_KEY,
+      JSON.stringify({
+        schemaVersion: 3,
+        activeCvId: 'cv-laura',
+        cvs: [
+          { id: 'cv-laura', ...withoutVersionField(savedDocument({ versions: [version('ver-a', 'Empresa A')] })) },
+          { id: 'cv-camila', ...withoutVersionField(camila) },
+        ],
+      }),
+    ] as const,
+  )
+  await page.goto('./')
+
+  await page.getByRole('button', { name: 'Borrar el CV de Laura Pérez' }).click()
+  const dialog = page.getByRole('dialog', { name: 'Borrar el CV' })
+  await expect(dialog).toContainText('Laura Pérez y su versión')
+  await dialog.getByRole('button', { name: 'Cancelar' }).click()
+  await expect(page.getByRole('button', { name: 'Abrir el CV de Laura Pérez' })).toBeVisible()
+
+  await page.getByRole('button', { name: 'Borrar el CV de Laura Pérez' }).click()
+  const download = page.waitForEvent('download')
+  await dialog.getByRole('button', { name: 'Bajar copia y borrar' }).click()
+  const copy = JSON.parse(await readFile((await (await download).path()) ?? '', 'utf8'))
+  expect(copy.cvs).toHaveLength(1)
+  expect(copy.cvs[0].resumes.es.personal.fullName).toBe('Laura Pérez')
+
+  await expect(page.getByRole('button', { name: 'Abrir el CV de Laura Pérez' })).toHaveCount(0)
+  await expect(page.getByRole('button', { name: 'Abrir el CV de Camila Prueba' })).toBeVisible()
+  await afterAutosave(page)
+  expect((await library(page))?.cvs.map((cv) => cv.resumes.es.personal.fullName)).toEqual(['Camila Prueba'])
+})
+
+test('the base keeps its own cover letter across a reload', async ({ page }) => {
+  await seed(page, savedDocument())
+  await page.goto('editor')
+
+  await page.getByRole('button', { name: 'Carta de presentación' }).click()
+  const dialog = page.getByRole('dialog', { name: 'Carta de presentación' })
+  await dialog.getByLabel('Empresa').fill('Tienda del Centro')
+  await dialog.getByLabel('El párrafo que escribís vos').fill('Me interesa atender clientes en el local.')
+  await page.keyboard.press('Escape')
+  await afterAutosave(page)
+
+  await page.reload()
+  await page.getByRole('button', { name: 'Carta de presentación' }).click()
+  await expect(dialog.getByLabel('Empresa')).toHaveValue('Tienda del Centro')
+  await expect(dialog.getByLabel('El párrafo que escribís vos')).toHaveValue('Me interesa atender clientes en el local.')
 })
 
 test('a resume saved before versions existed opens whole and is upgraded', async ({ page }) => {
@@ -67,13 +127,14 @@ test('a resume saved before versions existed opens whole and is upgraded', async
   }
   await seed(page, v1)
   await page.goto('./')
-  await page.getByRole('button', { name: 'Seguir con el CV guardado' }).click()
+  await page.getByRole('button', { name: 'Abrir el CV de Laura Pérez' }).click()
 
   await expect(page.getByRole('heading', { name: 'Laura Pérez' })).toBeVisible()
   await afterAutosave(page)
   const raw = await page.evaluate((key) => JSON.parse(localStorage.getItem(key) ?? '{}'), STORAGE_KEY)
-  expect(raw.schemaVersion).toBe(2)
-  expect(raw.versions).toEqual([])
+  expect(raw.schemaVersion).toBe(3)
+  expect(raw.cvs).toHaveLength(1)
+  expect(raw.cvs[0].versions).toEqual([])
   expect(await page.evaluate(() => localStorage.getItem('cv-match:unreadable'))).toBeNull()
 })
 
@@ -87,58 +148,31 @@ const otherPerson = resume({
   personal: { fullName: 'Otra Persona', headline: 'Vendedora', email: 'otra@example.com', phone: '1', city: 'Quilmes' },
 })
 
-test('loading a copy asks before replacing what is open, and the backup holds it', async ({ page }) => {
+test('loading a copy adds it as its own resume and keeps the open one', async ({ page }) => {
   await seed(page, savedDocument({ versions: [version('ver-a', 'Empresa A')] }))
-  await page.goto('editor')
-  await expect(page.getByRole('heading', { name: 'Laura Pérez' })).toBeVisible()
-  const input = page.locator('input[type="file"][accept*="json"]')
-  const dialog = page.getByRole('dialog', { name: 'Cargar la copia' })
+  await page.goto('editor/versions/ver-a')
+  await expect(page.getByText('Para Empresa A · Oficial de atención')).toBeVisible()
+
   const incoming = { ...savedDocument(), resumes: { es: otherPerson } }
+  await page.locator('input[type="file"][accept*="json"]').setInputFiles(jsonFile(incoming))
 
-  await input.setInputFiles(jsonFile(incoming))
-  await expect(dialog).toContainText('Laura Pérez y 1 versión')
-  await expect(dialog).toContainText('Otra Persona')
-  await dialog.getByRole('button', { name: 'Cancelar' }).click()
-  await afterAutosave(page)
-  expect((await stored(page))?.resumes.es.personal.fullName).toBe('Laura Pérez')
-  expect((await stored(page))?.versions).toHaveLength(1)
-
-  await input.setInputFiles(jsonFile(incoming))
-  const download = page.waitForEvent('download')
-  await dialog.getByRole('button', { name: 'Bajar copia de lo actual y cargar' }).click()
-  const backup = JSON.parse(await readFile((await (await download).path()) ?? '', 'utf8'))
-  expect(backup.resumes.es.personal.fullName).toBe('Laura Pérez')
-  expect(backup.versions).toHaveLength(1)
-
+  // Nothing is replaced, so nothing is asked.
+  await expect(page.getByRole('dialog')).toHaveCount(0)
   await expect(page.getByRole('heading', { name: 'Otra Persona' })).toBeVisible()
-  await afterAutosave(page)
-  expect((await stored(page))?.versions).toEqual([])
-})
-
-test('a bare resume replaces the base and keeps the versions on top', async ({ page }) => {
-  await seed(page, savedDocument({ versions: [version('ver-a', 'Empresa A')] }))
-  await page.goto('editor')
-  await expect(page.getByRole('heading', { name: 'Laura Pérez' })).toBeVisible()
-
-  await page.locator('input[type="file"][accept*="json"]').setInputFiles(jsonFile(otherPerson))
-  const dialog = page.getByRole('dialog', { name: 'Cargar la copia' })
-  await expect(dialog).toContainText('Tu versión se mantiene')
-  await dialog.getByRole('button', { name: 'Cargar sin copia' }).click()
-
-  await expect(page.getByRole('heading', { name: 'Otra Persona' })).toBeVisible()
-  await afterAutosave(page)
-  const saved = await stored(page)
-  expect(saved?.resumes.es.personal.fullName).toBe('Otra Persona')
-  expect(saved?.versions).toHaveLength(1)
-})
-
-test('with nothing written yet, a copy loads without asking', async ({ page }) => {
-  await page.goto('./')
-  await page.getByRole('button', { name: /No, lo manda por mail/ }).click()
-  await page.getByRole('button', { name: 'Empezar', exact: true }).click()
   await expect(page).toHaveURL(/\/cv-match\/editor$/)
+  await expect(page.getByText(/Copia cargada como un CV aparte/)).toBeVisible()
 
-  await page.locator('input[type="file"][accept*="json"]').setInputFiles(jsonFile(savedDocument()))
-  await expect(page.getByRole('heading', { name: 'Laura Pérez' })).toBeVisible()
-  await expect(page.getByRole('dialog', { name: 'Cargar la copia' })).toHaveCount(0)
+  await afterAutosave(page)
+  const saved = await library(page)
+  expect(saved?.cvs.map((cv) => cv.resumes.es.personal.fullName)).toEqual(['Laura Pérez', 'Otra Persona'])
+  expect(saved?.cvs[0]?.versions).toHaveLength(1)
+})
+
+test('a bare resume file is added too', async ({ page }) => {
+  await seed(page, savedDocument())
+  await page.goto('editor')
+  await page.locator('input[type="file"][accept*="json"]').setInputFiles(jsonFile(otherPerson))
+  await expect(page.getByRole('heading', { name: 'Otra Persona' })).toBeVisible()
+  await afterAutosave(page)
+  expect((await library(page))?.cvs).toHaveLength(2)
 })

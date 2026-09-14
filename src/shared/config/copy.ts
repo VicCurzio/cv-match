@@ -1,10 +1,3 @@
-/** "Laura Pérez y 2 versiones", for the confirmations that name what is at stake. */
-function describe(name: string, versions: number): string {
-  const who = name || 'sin nombre'
-  if (versions === 0) return who
-  return `${who} y ${versions === 1 ? '1 versión' : `${versions} versiones`}`
-}
-
 /**
  * Every string the user reads lives here, from the first commit.
  *
@@ -29,16 +22,20 @@ export const copy = {
     atsNoHint: 'PyMEs, comercios, contactos directos. Podés usar una plantilla con diseño.',
     begin: 'Empezar',
     resume: 'Seguir con el CV guardado',
-    savedTitle: 'Tenés un CV guardado en este navegador',
-    savedDetail: (name: string, versions: number) =>
-      `${name || 'Sin nombre todavía'}${versions > 0 ? ` · ${versions === 1 ? '1 versión' : `${versions} versiones`}` : ''}`,
-    newInstead: 'O respondé estas dos preguntas para empezar uno nuevo.',
+    savedTitle: 'Tus CV en este navegador',
+    unnamed: 'Sin nombre todavía',
+    versionCount: (versions: number) =>
+      versions === 0 ? 'Sin versiones' : versions === 1 ? '1 versión' : `${versions} versiones`,
+    open: 'Abrir',
+    openLabel: (name: string) => `Abrir el CV de ${name || 'sin nombre'}`,
+    deleteLabel: (name: string) => `Borrar el CV de ${name || 'sin nombre'}`,
+    newInstead: 'O respondé estas dos preguntas para empezar otro. Los que ya tenés quedan como están.',
     beginNew: 'Empezar uno nuevo',
-    replaceTitle: 'Empezar un CV nuevo',
-    replaceBody: (name: string, versions: number) =>
-      `El CV guardado${name ? ` de ${name}` : ''}${versions > 0 ? ` y ${versions === 1 ? 'su versión' : `sus ${versions} versiones`}` : ''} se reemplaza en este navegador. Bajá una copia antes: después la podés volver a abrir con "Cargar copia (.json)".`,
-    backupAndBegin: 'Bajar copia y empezar',
-    beginWithoutBackup: 'Empezar sin copia',
+    deleteTitle: 'Borrar el CV',
+    deleteBody: (name: string, versions: number) =>
+      `Se borra de este navegador el CV${name ? ` de ${name}` : ''}${versions > 0 ? ` y ${versions === 1 ? 'su versión' : `sus ${versions} versiones`}` : ''}, con sus cartas. No se puede deshacer, salvo que bajes una copia antes.`,
+    backupAndDelete: 'Bajar copia y borrar',
+    deleteWithoutBackup: 'Borrar sin copia',
     cancel: 'Cancelar',
     backupFileName: 'cv-match-copia.json',
   },
@@ -55,6 +52,7 @@ export const copy = {
     skills: 'Habilidades',
     languages: 'Idiomas',
     preview: 'Vista previa',
+    myCvs: 'Mis CV',
     zoom: 'Ampliar',
     openPage: (page: number, total: number) =>
       total > 1 ? `Ver la página ${page} de ${total} en grande` : 'Ver el CV en grande',
@@ -88,15 +86,10 @@ export const copy = {
   },
 
   loadCopy: {
-    title: 'Cargar la copia',
-    whole: (current: string, currentVersions: number, incoming: string, incomingVersions: number) =>
-      `Se reemplaza lo que tenés abierto (${describe(current, currentVersions)}) por la copia (${describe(incoming, incomingVersions)}). Lo actual no se puede recuperar después, salvo que bajes una copia antes.`,
-    base: (current: string, incoming: string, versions: number) =>
-      `Se reemplazan los datos del CV base (${current || 'sin nombre'}) por los del archivo (${incoming || 'sin nombre'}).${versions > 0 ? ` ${versions === 1 ? 'Tu versión se mantiene' : `Tus ${versions} versiones se mantienen`}, ahora sobre los datos nuevos.` : ''}`,
-    backupAndLoad: 'Bajar copia de lo actual y cargar',
-    loadWithoutBackup: 'Cargar sin copia',
-    cancel: 'Cancelar',
-    loaded: 'Copia cargada.',
+    loaded: (count: number) =>
+      count === 1
+        ? 'Copia cargada como un CV aparte. El que tenías abierto sigue en "Mis CV".'
+        : `Se cargaron ${count} CV. El que tenías abierto sigue en "Mis CV".`,
   },
 
   otherTab: {

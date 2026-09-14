@@ -1,6 +1,7 @@
 import { Suspense, lazy, useState } from 'react'
 import { Navigate, Route, Routes, useMatch, useNavigate } from 'react-router'
 import { downloadJson } from '@/domain/export/download'
+import { exportCv } from '@/domain/resume/storage'
 import { useResume } from '@/domain/resume/useResume'
 import { NotFoundScreen } from '@/screens/not-found/NotFoundScreen'
 import { VERSION_ROUTE, editorAccess, paths, resumePath } from '@/screens/routes'
@@ -42,14 +43,31 @@ export default function App() {
 
   const editor = () => {
     const access = editorAccess({
-      hasResume: state.hasSaved || started,
+      hasResume: state.cvs.length > 0 || started,
       versionId: selected ?? null,
       versionIds,
     })
-    return access.kind === 'redirect' ? <Navigate to={access.to} replace /> : (
-      <Suspense fallback={<EditorLoading />}>
-        <EditorScreen state={state} />
-      </Suspense>
+    // Under /editor, only the base and a version are addresses; anything else goes to the base.
+    if (!onEditor && !onVersion) return <Navigate to={paths.editor} replace />
+    // No resume at all: the start screen replaces the editor.
+    if (access.kind === 'redirect' && access.to !== paths.editor) return <Navigate to={access.to} replace />
+
+    /*
+     * A version that is not in the open resume redirects BESIDE the editor, not
+     * instead of it. React Router applies an address change as a transition,
+     * behind ordinary state updates, so switching resume or deleting a version
+     * briefly renders the new state under the old address. Rendering the
+     * redirect in the editor's place then unmounted the editor and built it
+     * again: the preview was redrawn from nothing and a notice raised a moment
+     * before was gone.
+     */
+    return (
+      <>
+        {access.kind === 'redirect' ? <Navigate to={access.to} replace /> : null}
+        <Suspense fallback={<EditorLoading />}>
+          <EditorScreen state={state} />
+        </Suspense>
+      </>
     )
   }
 
@@ -59,30 +77,34 @@ export default function App() {
         path={paths.start}
         element={
           <StartScreen
-            // Answered earlier in this visit counts: going back from the editor
-            // must still offer to continue, not only to start over.
-            saved={
-              state.hasSaved || started
-                ? { fullName: state.base.personal.fullName, versions: state.versions.length }
-                : null
-            }
-            onBackup={() => downloadJson(state.toDocument(), copy.start.backupFileName)}
+            cvs={state.cvs}
             unreadable={state.unreadable}
             onDismissUnreadable={state.dismissUnreadable}
+            onBackup={(cv) => {
+              const saved = state.findCv(cv.id)
+              if (saved) downloadJson(exportCv(saved), copy.start.backupFileName)
+            }}
+            onDelete={(cv) => state.deleteCv(cv.id)}
             onStart={(settings) => {
-              // A first visit has nothing to replace. Otherwise the screen has
-              // already asked, and this is the confirmed start over.
-              if (state.hasSaved || started) state.startNew(settings)
-              else state.setBaseSettings(settings)
+              // An untouched resume is reused; otherwise a new one is added
+              // beside the others, which stay as they are.
+              if (state.openIsBlank) state.setBaseSettings(settings)
+              else state.createCv(settings)
               setStarted(true)
               navigate(paths.editor)
             }}
-            onResume={() => navigate(resumePath(state.activeVersionId, versionIds))}
+            onOpen={(cv) => {
+              state.openCv(cv.id)
+              navigate(resumePath(cv.activeVersionId, cv.versionIds))
+            }}
           />
         }
       />
-      <Route path={paths.editor} element={editor()} />
-      <Route path={VERSION_ROUTE} element={editor()} />
+      {/*
+        One route for the base and every version, and anything else under
+        /editor goes back to the base (see `editor` above).
+      */}
+      <Route path={`${paths.editor}/*`} element={editor()} />
       <Route path="*" element={<NotFoundScreen />} />
     </Routes>
   )

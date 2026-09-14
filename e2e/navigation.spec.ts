@@ -16,8 +16,7 @@ test('a first visit answers the questions, and Back and Forward move one step', 
 
   await page.goBack()
   await expect(page).toHaveURL(/\/cv-match\/?$/)
-  // Back on the start screen in the same visit, continuing is still offered.
-  await expect(page.getByRole('button', { name: 'Seguir con el CV guardado' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Armemos tu CV' })).toBeVisible()
 
   await page.goForward()
   await expect(page).toHaveURL(/\/cv-match\/editor$/)
@@ -28,7 +27,7 @@ test('looking at the start screen does not leave a "saved resume" behind', async
   await afterAutosave(page)
   await page.reload()
 
-  await expect(page.getByText('Tenés un CV guardado en este navegador')).toHaveCount(0)
+  await expect(page.getByText('Tus CV en este navegador')).toHaveCount(0)
   await expect(page.getByRole('button', { name: 'Empezar', exact: true })).toBeVisible()
 })
 

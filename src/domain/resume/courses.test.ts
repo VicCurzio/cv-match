@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { cleanAr } from '@/test/fixtures'
 import { emptyResume, resumeSchema } from './resumeSchema'
-import { parseResumeJson } from './storage'
+import { parseCopy } from './storage'
 
 /**
  * Courses are separate from formal education on purpose: a secondary school
@@ -80,9 +80,9 @@ describe('a resume saved before this section existed still loads', () => {
   })
 
   it('imports from a .json that has no courses key', () => {
-    const result = parseResumeJson(JSON.stringify(older))
+    const result = parseCopy(JSON.stringify(older))
     expect(result.ok).toBe(true)
-    if (result.ok) expect(result.resume.courses).toEqual([])
+    if (result.ok) expect(result.cvs[0]?.resumes.es.courses).toEqual([])
   })
 
   it('does not lose anything else in the process', () => {

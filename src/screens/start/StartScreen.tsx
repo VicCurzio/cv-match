@@ -1,7 +1,8 @@
-import { ArrowRight, Building2, Download, Globe2, Mail } from 'lucide-react'
+import { ArrowRight, Building2, Download, Globe2, Mail, Trash2 } from 'lucide-react'
 import { useState } from 'react'
 import { MARKET_PROFILES, type MarketId } from '@/domain/market/marketProfile'
 import type { Settings } from '@/domain/resume/storage'
+import type { CvSummary } from '@/domain/resume/useResume'
 import { RecoveryNotice } from '@/screens/recovery/RecoveryNotice'
 import { Card } from '@/shared/ui/Card'
 import { Dialog } from '@/shared/ui/Dialog'
@@ -12,15 +13,20 @@ import { cn } from '@/shared/utils/cn'
 /**
  * The answer to the empty state: nobody is dropped in front of a blank form.
  * The two questions asked here are the two that change the result the most.
+ *
+ * It is also where the resumes kept in this browser are listed. Several people
+ * can have a resume here -- your own and a relative's -- and starting a new one
+ * adds it, without touching the others.
  */
 
 interface Props {
-  /** The resume already in this browser, or `null` on a first visit. */
-  saved: { fullName: string; versions: number } | null
+  /** The resumes with something in them. Empty on a first visit. */
+  cvs: CvSummary[]
   onStart: (settings: Pick<Settings, 'market' | 'atsMode' | 'template'>) => void
-  onResume: () => void
-  /** Downloads the saved document as a `.json` copy. */
-  onBackup: () => void
+  onOpen: (cv: CvSummary) => void
+  /** Downloads one resume as a `.json` copy. */
+  onBackup: (cv: CvSummary) => void
+  onDelete: (cv: CvSummary) => void
   /** The raw text of a saved document that could not be read, to offer back. */
   unreadable: string | null
   onDismissUnreadable: () => void
@@ -62,10 +68,10 @@ function Choice({
   )
 }
 
-export function StartScreen({ saved, onStart, onResume, onBackup, unreadable, onDismissUnreadable }: Props) {
+export function StartScreen({ cvs, onStart, onOpen, onBackup, onDelete, unreadable, onDismissUnreadable }: Props) {
   const [market, setMarket] = useState<MarketId>('AR')
   const [atsMode, setAtsMode] = useState<boolean | null>(null)
-  const [confirming, setConfirming] = useState(false)
+  const [deleting, setDeleting] = useState<CvSummary | null>(null)
 
   const answers = {
     market,
@@ -73,16 +79,8 @@ export function StartScreen({ saved, onStart, onResume, onBackup, unreadable, on
     template: atsMode ? 'harvard' : 'modern',
   } as const
 
-  /*
-   * With a resume saved, "Empezar" used to carry on with that same resume under
-   * the new answers: there was no way to start from zero -- to make a second
-   * person's resume after your own -- short of clearing browser data by hand.
-   * Starting over now replaces it, so it asks first and offers the copy.
-   */
-  function begin() {
-    if (saved) setConfirming(true)
-    else onStart(answers)
-  }
+  // The one that was open last goes first: it is almost always the one to continue.
+  const listed = [...cvs].sort((a, b) => Number(b.isOpen) - Number(a.isOpen))
 
   return (
     <main className="mx-auto flex min-h-full max-w-2xl flex-col justify-center gap-8 px-6 py-16">
@@ -96,22 +94,47 @@ export function StartScreen({ saved, onStart, onResume, onBackup, unreadable, on
 
       {unreadable ? <RecoveryNotice unreadable={unreadable} onDismiss={onDismissUnreadable} /> : null}
 
-      {saved ? (
-        <Card className="flex flex-wrap items-center justify-between gap-4 p-5">
-          <div>
-            <p className="text-sm font-medium">{copy.start.savedTitle}</p>
-            <p className="mt-0.5 text-sm text-muted-foreground">
-              {copy.start.savedDetail(saved.fullName, saved.versions)}
-            </p>
-          </div>
-          <Button variant="primary" onClick={onResume}>
-            {copy.start.resume}
-            <ArrowRight />
-          </Button>
-        </Card>
+      {listed.length > 0 ? (
+        <section className="flex flex-col gap-3" aria-labelledby="saved-cvs">
+          <h2 id="saved-cvs" className="text-sm font-medium">
+            {copy.start.savedTitle}
+          </h2>
+          <ul className="flex flex-col gap-2">
+            {listed.map((cv) => (
+              <li key={cv.id}>
+                <Card className="flex flex-wrap items-center justify-between gap-3 p-4">
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-medium">{cv.fullName || copy.start.unnamed}</p>
+                    <p className="mt-0.5 text-xs text-muted-foreground">
+                      {copy.start.versionCount(cv.versionIds.length)}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant={cv === listed[0] ? 'primary' : 'secondary'}
+                      size="sm"
+                      aria-label={copy.start.openLabel(cv.fullName)}
+                      onClick={() => onOpen(cv)}
+                    >
+                      {copy.start.open}
+                      <ArrowRight />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      aria-label={copy.start.deleteLabel(cv.fullName)}
+                      onClick={() => setDeleting(cv)}
+                    >
+                      <Trash2 />
+                    </Button>
+                  </div>
+                </Card>
+              </li>
+            ))}
+          </ul>
+          <p className="text-sm text-muted-foreground">{copy.start.newInstead}</p>
+        </section>
       ) : null}
-
-      {saved ? <p className="text-sm text-muted-foreground">{copy.start.newInstead}</p> : null}
 
       <section className="flex flex-col gap-3">
         <h2 className="text-sm font-medium">{copy.start.marketQuestion}</h2>
@@ -148,43 +171,45 @@ export function StartScreen({ saved, onStart, onResume, onBackup, unreadable, on
 
       <div className="flex flex-wrap items-center gap-3">
         <Button
-          variant={saved ? 'secondary' : 'primary'}
+          variant={listed.length > 0 ? 'secondary' : 'primary'}
           size="lg"
           disabled={atsMode === null}
-          onClick={begin}
+          onClick={() => onStart(answers)}
         >
-          {saved ? copy.start.beginNew : copy.start.begin}
+          {listed.length > 0 ? copy.start.beginNew : copy.start.begin}
           <ArrowRight />
         </Button>
       </div>
 
-      {confirming && saved ? (
-        <Dialog
-          label={copy.start.replaceTitle}
-          onClose={() => setConfirming(false)}
-          className="max-w-md"
-          align="center"
-        >
+      {deleting ? (
+        <Dialog label={copy.start.deleteTitle} onClose={() => setDeleting(null)} className="max-w-md" align="center">
           <div className="flex flex-col gap-4 p-5">
-            <h2 className="text-base font-semibold">{copy.start.replaceTitle}</h2>
+            <h2 className="text-base font-semibold">{copy.start.deleteTitle}</h2>
             <p className="text-sm text-muted-foreground">
-              {copy.start.replaceBody(saved.fullName, saved.versions)}
+              {copy.start.deleteBody(deleting.fullName, deleting.versionIds.length)}
             </p>
             <div className="flex flex-wrap gap-2">
               <Button
                 variant="primary"
                 onClick={() => {
-                  onBackup()
-                  onStart(answers)
+                  onBackup(deleting)
+                  onDelete(deleting)
+                  setDeleting(null)
                 }}
               >
                 <Download />
-                {copy.start.backupAndBegin}
+                {copy.start.backupAndDelete}
               </Button>
-              <Button variant="destructive" onClick={() => onStart(answers)}>
-                {copy.start.beginWithoutBackup}
+              <Button
+                variant="destructive"
+                onClick={() => {
+                  onDelete(deleting)
+                  setDeleting(null)
+                }}
+              >
+                {copy.start.deleteWithoutBackup}
               </Button>
-              <Button variant="ghost" onClick={() => setConfirming(false)}>
+              <Button variant="ghost" onClick={() => setDeleting(null)}>
                 {copy.start.cancel}
               </Button>
             </div>

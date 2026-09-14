@@ -77,13 +77,31 @@ export async function seed(page: Page, document: unknown): Promise<void> {
   )
 }
 
-export async function stored(page: Page): Promise<{
+interface SavedCv {
+  id: string
   settings: { market: string; atsMode: boolean; template: string }
   resumes: { es: { personal: { fullName: string }; summary: string } }
   versions: { id: string; company: string; overrides: Record<string, unknown> }[]
   activeVersionId: string | null
-} | null> {
+  letter?: { role: string; company: string; recipient: string; body: string }
+}
+
+interface SavedLibrary {
+  schemaVersion: number
+  activeCvId: string | null
+  cvs: SavedCv[]
+}
+
+/** The whole saved library, as the app last wrote it. */
+export async function library(page: Page): Promise<SavedLibrary | null> {
   return page.evaluate((key) => JSON.parse(localStorage.getItem(key) ?? 'null'), STORAGE_KEY)
+}
+
+/** The open resume of the saved library. */
+export async function stored(page: Page): Promise<SavedCv | null> {
+  const saved = await library(page)
+  if (!saved) return null
+  return saved.cvs.find((cv) => cv.id === saved.activeCvId) ?? saved.cvs[0] ?? null
 }
 
 /** Waits past the autosave delay, so what storage holds is what the app decided. */
