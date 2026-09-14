@@ -6,6 +6,7 @@ import {
   differsFrom,
   documentSchema,
   freshDocument,
+  importPlan,
   isBlankDocument,
   isDocumentChange,
   loadDocument,
@@ -302,5 +303,40 @@ describe('a blank saved document', () => {
 
   it('a full resume is not blank', () => {
     expect(isBlankDocument({ ...freshDocument(answers), resumes: { es: cleanAr } })).toBe(false)
+  })
+})
+
+describe('what loading a copy would replace', () => {
+  const settings = { market: 'AR' as const, atsMode: false, template: 'modern' as const }
+  const open: StoredDocument = {
+    ...freshDocument(settings),
+    resumes: { es: cleanAr },
+    versions: [createVersion({ id: 'ver-1', company: 'A', role: 'B' }, settings)],
+  }
+  const other = { ...cleanAr, personal: { ...cleanAr.personal, fullName: 'Otra Persona' } }
+
+  it('a whole export replaces everything, and says how many versions come with it', () => {
+    const document = { ...freshDocument(settings), resumes: { es: other } }
+    const plan = importPlan(open, { ok: true, resume: other, document })
+    expect(plan).toEqual({
+      scope: 'document',
+      current: { fullName: cleanAr.personal.fullName, versions: 1 },
+      incoming: { fullName: 'Otra Persona', versions: 0 },
+      needsConfirmation: true,
+    })
+  })
+
+  it('a bare resume replaces only the base, so the versions stay', () => {
+    const plan = importPlan(open, { ok: true, resume: other })
+    expect(plan.scope).toBe('base')
+    expect(plan.incoming.versions).toBe(1)
+  })
+
+  it('does not ask when what is open is blank', () => {
+    expect(importPlan(freshDocument(settings), { ok: true, resume: other }).needsConfirmation).toBe(false)
+  })
+
+  it('asks as soon as there is anything to lose', () => {
+    expect(importPlan(open, { ok: true, resume: other }).needsConfirmation).toBe(true)
   })
 })

@@ -1,3 +1,10 @@
+/** "Laura Pérez y 2 versiones", for the confirmations that name what is at stake. */
+function describe(name: string, versions: number): string {
+  const who = name || 'sin nombre'
+  if (versions === 0) return who
+  return `${who} y ${versions === 1 ? '1 versión' : `${versions} versiones`}`
+}
+
 /**
  * Every string the user reads lives here, from the first commit.
  *
@@ -77,6 +84,18 @@ export const copy = {
     title: 'Esta página no existe',
     body: 'Puede que el link esté mal escrito. Tu CV sigue guardado en este navegador.',
     back: 'Ir al inicio',
+  },
+
+  loadCopy: {
+    title: 'Cargar la copia',
+    whole: (current: string, currentVersions: number, incoming: string, incomingVersions: number) =>
+      `Se reemplaza lo que tenés abierto (${describe(current, currentVersions)}) por la copia (${describe(incoming, incomingVersions)}). Lo actual no se puede recuperar después, salvo que bajes una copia antes.`,
+    base: (current: string, incoming: string, versions: number) =>
+      `Se reemplazan los datos del CV base (${current || 'sin nombre'}) por los del archivo (${incoming || 'sin nombre'}).${versions > 0 ? ` ${versions === 1 ? 'Tu versión se mantiene' : `Tus ${versions} versiones se mantienen`}, ahora sobre los datos nuevos.` : ''}`,
+    backupAndLoad: 'Bajar copia de lo actual y cargar',
+    loadWithoutBackup: 'Cargar sin copia',
+    cancel: 'Cancelar',
+    loaded: 'Copia cargada.',
   },
 
   otherTab: {

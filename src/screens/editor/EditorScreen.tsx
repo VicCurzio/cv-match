@@ -6,7 +6,7 @@ import { downloadBlob, downloadJson } from '@/domain/export/download'
 import { MARKET_PROFILES, forbiddenFields, type MarketId } from '@/domain/market/marketProfile'
 import { BODY_PLACEHOLDER } from '@/domain/letter/letterModel'
 import { FIELD_LABEL } from '@/domain/resume/resumeSchema'
-import { parseResumeJson } from '@/domain/resume/storage'
+import { importPlan, parseResumeJson, type ImportPlan, type ImportedFile } from '@/domain/resume/storage'
 import type { ResumeState } from '@/domain/resume/useResume'
 import { versionLabel } from '@/domain/resume/versions'
 import { ImportDialog } from '@/screens/import/ImportDialog'
@@ -21,6 +21,7 @@ import { resumeFileName } from '@/templates/buildPdf'
 import { PdfLightbox, PdfPagePlaceholder, PdfPages } from './PdfPages'
 import { usePdfDocument } from './usePdfDocument'
 import { ResumeForm } from './ResumeForm'
+import { LoadCopyDialog } from './LoadCopyDialog'
 import { DeleteVersionDialog, NewVersionDialog } from './VersionDialogs'
 import { VersionForm } from './VersionForm'
 import { usePdfPreview } from './usePdfPreview'
@@ -46,6 +47,7 @@ export function EditorScreen({ state }: { state: ResumeState }) {
   const [writingLetter, setWritingLetter] = useState(false)
   const [creatingVersion, setCreatingVersion] = useState(false)
   const [deletingVersion, setDeletingVersion] = useState(false)
+  const [pendingCopy, setPendingCopy] = useState<{ file: ImportedFile; plan: ImportPlan } | null>(null)
   const fileInput = useRef<HTMLInputElement>(null)
 
   const profile = MARKET_PROFILES[settings.market]
@@ -114,17 +116,23 @@ export function EditorScreen({ state }: { state: ResumeState }) {
     )
   }
 
+  function applyCopy(file: ImportedFile) {
+    // A whole export brings its versions back; a bare resume replaces the facts.
+    if (file.document) state.replaceDocument(file.document)
+    else replaceAll(file.resume)
+    setMessage(copy.loadCopy.loaded)
+  }
+
   async function handleImport(file: File | undefined) {
     if (!file) return
     const result = parseResumeJson(await file.text())
-    if (result.ok) {
-      // A whole export brings its versions back; a bare resume replaces the facts.
-      if (result.document) state.replaceDocument(result.document)
-      else replaceAll(result.resume)
-      setMessage('Copia cargada.')
-    } else {
+    if (!result.ok) {
       setMessage(result.message)
+      return
     }
+    const plan = importPlan(state.toDocument(), result)
+    if (plan.needsConfirmation) setPendingCopy({ file: result, plan })
+    else applyCopy(result)
   }
 
   return (
@@ -377,6 +385,18 @@ export function EditorScreen({ state }: { state: ResumeState }) {
 
       {zoomedPage !== null && pdf.doc ? (
         <PdfLightbox doc={pdf.doc} startPage={zoomedPage} onClose={closePreview} />
+      ) : null}
+
+      {pendingCopy ? (
+        <LoadCopyDialog
+          plan={pendingCopy.plan}
+          onBackup={() => downloadJson(state.toDocument(), copy.start.backupFileName)}
+          onLoad={() => {
+            applyCopy(pendingCopy.file)
+            setPendingCopy(null)
+          }}
+          onClose={() => setPendingCopy(null)}
+        />
       ) : null}
 
       {creatingVersion ? (

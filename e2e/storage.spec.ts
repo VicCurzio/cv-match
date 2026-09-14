@@ -76,3 +76,69 @@ test('a resume saved before versions existed opens whole and is upgraded', async
   expect(raw.versions).toEqual([])
   expect(await page.evaluate(() => localStorage.getItem('cv-match:unreadable'))).toBeNull()
 })
+
+const jsonFile = (content: unknown) => ({
+  name: 'copia.json',
+  mimeType: 'application/json',
+  buffer: Buffer.from(JSON.stringify(content)),
+})
+
+const otherPerson = resume({
+  personal: { fullName: 'Otra Persona', headline: 'Vendedora', email: 'otra@example.com', phone: '1', city: 'Quilmes' },
+})
+
+test('loading a copy asks before replacing what is open, and the backup holds it', async ({ page }) => {
+  await seed(page, savedDocument({ versions: [version('ver-a', 'Empresa A')] }))
+  await page.goto('editor')
+  await expect(page.getByRole('heading', { name: 'Laura Pérez' })).toBeVisible()
+  const input = page.locator('input[type="file"][accept*="json"]')
+  const dialog = page.getByRole('dialog', { name: 'Cargar la copia' })
+  const incoming = { ...savedDocument(), resumes: { es: otherPerson } }
+
+  await input.setInputFiles(jsonFile(incoming))
+  await expect(dialog).toContainText('Laura Pérez y 1 versión')
+  await expect(dialog).toContainText('Otra Persona')
+  await dialog.getByRole('button', { name: 'Cancelar' }).click()
+  await afterAutosave(page)
+  expect((await stored(page))?.resumes.es.personal.fullName).toBe('Laura Pérez')
+  expect((await stored(page))?.versions).toHaveLength(1)
+
+  await input.setInputFiles(jsonFile(incoming))
+  const download = page.waitForEvent('download')
+  await dialog.getByRole('button', { name: 'Bajar copia de lo actual y cargar' }).click()
+  const backup = JSON.parse(await readFile((await (await download).path()) ?? '', 'utf8'))
+  expect(backup.resumes.es.personal.fullName).toBe('Laura Pérez')
+  expect(backup.versions).toHaveLength(1)
+
+  await expect(page.getByRole('heading', { name: 'Otra Persona' })).toBeVisible()
+  await afterAutosave(page)
+  expect((await stored(page))?.versions).toEqual([])
+})
+
+test('a bare resume replaces the base and keeps the versions on top', async ({ page }) => {
+  await seed(page, savedDocument({ versions: [version('ver-a', 'Empresa A')] }))
+  await page.goto('editor')
+  await expect(page.getByRole('heading', { name: 'Laura Pérez' })).toBeVisible()
+
+  await page.locator('input[type="file"][accept*="json"]').setInputFiles(jsonFile(otherPerson))
+  const dialog = page.getByRole('dialog', { name: 'Cargar la copia' })
+  await expect(dialog).toContainText('Tu versión se mantiene')
+  await dialog.getByRole('button', { name: 'Cargar sin copia' }).click()
+
+  await expect(page.getByRole('heading', { name: 'Otra Persona' })).toBeVisible()
+  await afterAutosave(page)
+  const saved = await stored(page)
+  expect(saved?.resumes.es.personal.fullName).toBe('Otra Persona')
+  expect(saved?.versions).toHaveLength(1)
+})
+
+test('with nothing written yet, a copy loads without asking', async ({ page }) => {
+  await page.goto('./')
+  await page.getByRole('button', { name: /No, lo manda por mail/ }).click()
+  await page.getByRole('button', { name: 'Empezar', exact: true }).click()
+  await expect(page).toHaveURL(/\/cv-match\/editor$/)
+
+  await page.locator('input[type="file"][accept*="json"]').setInputFiles(jsonFile(savedDocument()))
+  await expect(page.getByRole('heading', { name: 'Laura Pérez' })).toBeVisible()
+  await expect(page.getByRole('dialog', { name: 'Cargar la copia' })).toHaveCount(0)
+})

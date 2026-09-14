@@ -5,6 +5,13 @@ Versionado según [SemVer](https://semver.org/lang/es/).
 
 ## [No publicado]
 
+### Cambiado: cargar una copia pregunta antes de reemplazar
+
+- **"Cargar copia (.json)" ya no reemplaza en el acto.** Si hay algo escrito, pregunta y nombra los dos lados: qué tenés abierto y qué trae el archivo, con sus versiones. Ofrece bajar una copia de lo actual antes, o cargar sin copia, o cancelar.
+- Distingue los dos casos: **una copia completa reemplaza todo**, versiones incluidas; **un CV suelto reemplaza solo los datos del CV base** y las versiones se mantienen encima.
+- Con el CV vacío carga directo: no hay nada que perder.
+- Tres escenarios de punta a punta nuevos (21 en total). Con la confirmación desactivada a propósito, fallan los dos que la cubren.
+
 ### Arreglado
 
 - **En un celular de 360 px el editor se salía de la pantalla.** Los selectores nativos se ensanchan hasta su opción más larga ("Internacional (EEUU, Reino Unido, Canadá)") y la grilla del editor no dejaba achicarse a su contenido. En Windows entraba por pocos píxeles; en Linux, y en un Android con fuente más ancha, no. Lo encontró el test de celular en la primera corrida en CI. El test ahora usa 360 px y fuerza una fuente ancha, así falla igual en cualquier máquina; se probó que falla sin el arreglo.

@@ -267,6 +267,41 @@ export type ImportResult =
   | { ok: true; resume: Resume; document?: StoredDocument }
   | { ok: false; message: string }
 
+export type ImportedFile = Extract<ImportResult, { ok: true }>
+
+export interface ImportPlan {
+  /**
+   * A whole export replaces everything, versions included. A bare resume
+   * replaces only the base's facts, and the versions stay layered on top.
+   */
+  scope: 'document' | 'base'
+  current: { fullName: string; versions: number }
+  incoming: { fullName: string; versions: number }
+  /** Nothing to lose when what is open is blank: load it without asking. */
+  needsConfirmation: boolean
+}
+
+/**
+ * What loading a copy would do to what is open, said before doing it.
+ *
+ * "Cargar copia (.json)" used to replace the resume -- and, with a whole
+ * export, every version -- the moment the file was chosen. Picking the wrong
+ * file from a downloads folder full of `cv-match-copia.json` and friends was
+ * enough to lose an afternoon of adapting, with no way back.
+ */
+export function importPlan(current: StoredDocument, file: ImportedFile): ImportPlan {
+  const scope = file.document ? 'document' : 'base'
+  return {
+    scope,
+    current: { fullName: current.resumes.es.personal.fullName, versions: current.versions.length },
+    incoming: {
+      fullName: file.resume.personal.fullName,
+      versions: file.document ? file.document.versions.length : current.versions.length,
+    },
+    needsConfirmation: !isBlankDocument(current),
+  }
+}
+
 /** Anything read from a file is validated before it reaches app state. */
 export function parseResumeJson(text: string): ImportResult {
   let json: unknown
