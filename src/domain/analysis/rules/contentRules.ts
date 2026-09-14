@@ -84,7 +84,9 @@ export const experienceExists: Rule = (resume) => {
  * "Encargada de la atención al cliente" describes a job title. "Atendí a 40
  * clientes por día" describes what the person did. The second one gets read.
  */
-export const bulletsStartWithVerb: Rule = (resume) => {
+export const bulletsStartWithVerb: Rule = (resume, ctx) => {
+  // The verb list is Spanish: on an English resume every bullet would "fail".
+  if (ctx.locale === 'en') return []
   const findings: Finding[] = []
   for (const item of resume.experience) {
     const weak = item.bullets.filter((b) => b.trim() && !startsWithActionVerb(b))

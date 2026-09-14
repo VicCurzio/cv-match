@@ -8,13 +8,14 @@ Todo corre en el navegador. No hay backend, no hay cuentas y el CV no se sube a 
 
 ## Qué resuelve
 
-La mayoría no sabe maquetar un CV, ni qué sacarle, ni que el CV que sirve en Argentina no es el que sirve afuera. CV Match hace cinco cosas:
+La mayoría no sabe maquetar un CV, ni qué sacarle, ni que el CV que sirve en Argentina no es el que sirve afuera. CV Match hace seis cosas:
 
 1. **Lo maqueta.** Dos plantillas, cada una con un propósito declarado.
 2. **Lo adapta al mercado.** En Argentina la foto se usa; en Estados Unidos, Reino Unido y Canadá hay reclutadores que descartan los CV con foto para no exponerse a una acusación de discriminación. La app lo sabe y filtra en consecuencia.
 3. **Lo diagnostica.** Un motor de reglas señala qué está flojo y **qué hacer** al respecto.
 4. **Guarda varios CV a la vez.** El tuyo y el de un familiar, cada uno con sus versiones y sus cartas, en el mismo navegador.
 5. **Lo adapta a cada aviso.** Una versión por postulación cambia el titular, el perfil, el orden de las habilidades y qué se muestra, sin tocar los hechos: puestos, fechas y números viven una sola vez en el CV base, así que lo que se corrige ahí llega a todas las versiones. Cada versión muestra qué palabras del aviso el CV todavía no menciona, como lista para revisar y no como puntaje.
+6. **Lo pasa al inglés.** Con el traductor que trae el navegador, en la misma computadora. El resultado es un borrador para revisar campo por campo, con el español al lado; las fechas, empresas y datos de contacto no se traducen: salen del CV en español.
 
 ## Requisitos
 
@@ -76,6 +77,8 @@ Si tocás esa política, **probala sobre el sitio construido**, no sobre el serv
 | `img-src data:` | La foto de perfil se guarda como data URL |
 | `style-src 'unsafe-inline'` | React escribe atributos `style` |
 
+**La traducción tampoco sale de la máquina.** Usa el traductor integrado de Chrome y Edge de escritorio (la API `Translator`), que corre en el dispositivo: el navegador baja el modelo de idioma una vez, por su cuenta, y el texto del CV se traduce localmente. La app no hace ninguna llamada de red para eso y la política de seguridad no cambió. No hay clave, cuenta ni servicio externo.
+
 El otro punto donde entra dato ajeno es el `.json` importado: se valida entero con zod antes de tocar el estado, y la foto se valida **por forma** además de por tipo, porque es el único valor que va directo a un `<img src>` y al renderizador de PDF.
 
 ## Accesibilidad
@@ -98,7 +101,7 @@ screens  ---------------->  domain
 ```
 src/
   screens/     una carpeta por pantalla
-  domain/      resume · market · analysis · posting · photo · letter · export · ingest · generate
+  domain/      resume · market · analysis · posting · photo · letter · translate · export · ingest · generate
   templates/   harvard/ y modern/, dibujadas con react-pdf
   shared/      ui · utils · config
 ```
@@ -119,7 +122,9 @@ Y se autoverifica: `--self-test` le da un import que **tiene** que rechazar y fa
 
 **El motor de reglas es puro.** `runAnalysis(resume, ctx)` no toca la red, ni estado, ni el reloj. Por eso se testea contra fixtures en milisegundos.
 
-**No hay ningún modelo de lenguaje.** `domain/generate/generator.ts` define el puerto y `nullGenerator` es la única implementación. La aplicación entera tiene que seguir funcionando con él.
+**No hay ningún modelo de lenguaje externo.** `domain/generate/generator.ts` define el puerto de la carta y `nullGenerator` es la única implementación. La aplicación entera tiene que seguir funcionando con él. La traducción no pasa por ese puerto: la hace el traductor del navegador, en el dispositivo.
+
+**El inglés es una capa sobre el CV en español, no un segundo CV.** `domain/resume/translation.ts` guarda solo los textos (título, perfil, puestos, viñetas, estudios, cursos, habilidades, idiomas), y cada uno recuerda el español del que salió. Las fechas, empresas y números se leen siempre del español, igual que las versiones: un dato corregido una vez queda corregido en los dos idiomas. Y si el español de un texto cambia después de traducirlo, se detecta: ese campo vuelve a imprimirse en español y se marca, en vez de mandar una traducción de algo que el CV ya no dice. La traducción automática la arma `domain/translate/buildTranslation.ts`: un glosario para puestos, habilidades e idiomas, los nombres propios (la persona, empresas, instituciones, sistemas como Veraz o Tango) apartados del traductor con marcadores, y un aviso cuando un número o un nombre no sobrevive.
 
 Eso también decide cómo funciona la **carta de presentación**: la estructura y los datos que ya están en el CV se completan solos, y el párrafo que explica por qué esta persona quiere este puesto queda para ella. Un párrafo que suena bien pero no lo escribió nadie es peor que uno en blanco, porque se manda igual y después hay que defenderlo en una entrevista. El botón de descargar está deshabilitado mientras ese párrafo siga siendo el texto de guía.
 
@@ -138,6 +143,7 @@ Se testea el núcleo, no la interfaz:
 - Las versiones: base más capa, que un cambio del base llegue a todas, que la capa no tenga dónde guardar un hecho, y que una viñeta reescrita con un número distinto no se exporte.
 - La migración de lo guardado: documentos de las versiones 1 y 2 cargan enteros como una biblioteca de un CV, y el esquema actual solo los rechaza (así el test prueba la migración y no la tolerancia del esquema).
 - Comparar con el aviso, contra el texto de un aviso real.
+- La traducción con un traductor falso: que el glosario gane al traductor, que los nombres propios no se traduzcan, que un número cambiado o un nombre perdido se marquen, que retraducir mande solo lo que cambió y respete lo editado a mano, y que las plantillas impriman títulos, meses y "Present" en inglés.
 - Las direcciones y quién puede entrar al editor (`screens/routes.ts`), y el tamaño con que se dibuja cada hoja de la vista previa.
 
 Lo que solo existe en el sitio construido lo verifica `npm run check:build` en el deploy: el `404.html` y que ningún archivo del sitio se pida con ruta relativa.
@@ -148,7 +154,7 @@ Lo que solo existe en el sitio construido lo verifica `npm run check:build` en e
 npm run test:e2e
 ```
 
-Playwright con Chromium, contra el **build de producción** servido por `vite preview`, no contra el servidor de desarrollo: la política de seguridad, la ruta base y la carga diferida del editor solo existen construidos, y cada una rompió algo en este proyecto que en desarrollo no se veía. Cubre lo que una persona hace: responder el inicio y moverse con Atrás y Adelante, crear, recargar y borrar versiones, la comparación con el aviso y las viñetas con números, la vista previa dibujada y su vista ampliada, dos pestañas sobre el mismo CV, varios CV a la vez (empezar otro, cambiar entre ellos, borrar con copia, cargar copias), la carta del CV base tras recargar, fechas a medio escribir, un CV guardado con formato viejo o ilegible, y el ancho de un celular.
+Playwright con Chromium, contra el **build de producción** servido por `vite preview`, no contra el servidor de desarrollo: la política de seguridad, la ruta base y la carga diferida del editor solo existen construidos, y cada una rompió algo en este proyecto que en desarrollo no se veía. Cubre lo que una persona hace: responder el inicio y moverse con Atrás y Adelante, crear, recargar y borrar versiones, la comparación con el aviso y las viñetas con números, la vista previa dibujada y su vista ampliada, dos pestañas sobre el mismo CV, varios CV a la vez (empezar otro, cambiar entre ellos, borrar con copia, cargar copias), la carta del CV base tras recargar, la traducción al inglés (con un traductor falso inyectado en el navegador: traducir, corregir a mano, recargar, detectar un español cambiado, un navegador sin traductor y una versión que sigue en español), fechas a medio escribir, un CV guardado con formato viejo o ilegible, y el ancho de un celular.
 
 Los datos de prueba se escriben en `localStorage` antes del primer script de la página (`e2e/fixtures.ts`) y con la forma que guarda la app, sin usar su código: un documento armado con las mismas funciones que se están probando cambiaría junto con el bug.
 
@@ -167,6 +173,10 @@ Tres de ellos vale la pena conocerlos antes de tocar lo que verifican:
 - El editor pesa alrededor de 450 KB comprimidos, casi todo `@react-pdf/renderer`. Se descarga recién al entrar al editor: la pantalla de inicio carga unos 110 KB.
 - La foto se guarda en el navegador. El cupo total ronda los 5 MB, por eso se comprime a 600x600 antes de guardarla; sin eso una foto de celular llena el cupo y el navegador deja de guardar sin avisar.
 - Los CV viven en el navegador donde se armaron. Varios conviven (el tuyo y el de otra persona), pero para pasarlos a otra computadora hay que bajar una copia `.json` y cargarla allá.
+- La traducción automática solo funciona en Chrome y Edge de computadora (versión 138 o posterior). En el celular, Firefox y Safari la app lo explica y el inglés se escribe a mano campo por campo. Los tests usan un traductor falso: el comportamiento del traductor real no se verifica en CI.
+- El glosario cubre puestos y habilidades de perfil administrativo, comercial y de atención al cliente. Un puesto fuera de él lo traduce el navegador y queda marcado para revisar.
+- Los títulos de estudio no se traducen: quedan en español con el significado entre paréntesis, porque una tecnicatura o una licenciatura no tienen un equivalente exacto.
+- El inglés aplica al CV base. Las versiones por aviso y la carta de presentación siguen en español.
 - Comparar con el aviso compara palabras, no significados: fuera de una lista corta de equivalencias ("ATM" y "cajero"), dos palabras distintas para lo mismo aparecen como faltante.
 - El control de números de las viñetas reescritas lee cifras escritas con dígitos. Un número escrito en letras ("treinta") no se detecta.
 - La fuente del PDF es una de las estándar del formato (Helvetica y Times-Roman). Cubren los acentos y la ñ sin embeber nada. Cambiar a una fuente propia obliga a registrarla con `Font.register`.

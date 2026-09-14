@@ -37,7 +37,7 @@ screens  ---------------->  domain
 
 Un sentido, nunca al revés. `shared/` no importa nada de `domain/`.
 
-Dentro de `domain/`, **`domain/resume` es el contrato**: el esquema del CV, del que dependen todos los demás (`market`, `analysis`, `letter`, `posting`, `generate`). El único otro cruce es `analysis -> market`, porque las reglas se juzgan contra un perfil de mercado. Fuera de eso las carpetas de `domain/` no se importan entre sí, y `resume` no importa de ninguna: si una necesita algo de otra, ese algo sube a `shared/` o lo orquesta la pantalla.
+Dentro de `domain/`, **`domain/resume` es el contrato**: el esquema del CV, del que dependen todos los demás (`market`, `analysis`, `letter`, `posting`, `translate`, `generate`). El único otro cruce es `analysis -> market`, porque las reglas se juzgan contra un perfil de mercado. Fuera de eso las carpetas de `domain/` no se importan entre sí, y `resume` no importa de ninguna: si una necesita algo de otra, ese algo sube a `shared/` o lo orquesta la pantalla.
 
 `npm run check:layers` lo verifica y **se autoverifica primero**: `--self-test` escribe un archivo que viola la regla y falla si el guard no lo rechaza. Si tocás `scripts/check-layers.mjs`, mantené ese comportamiento — un control que puede apagarse solo necesita su propia prueba.
 
@@ -50,7 +50,7 @@ Dentro de `domain/`, **`domain/resume` es el contrato**: el esquema del CV, del 
 ## Convenciones
 
 - **Identificadores en inglés** (carpetas, archivos, variables, funciones, tipos). **Prosa y textos de usuario en español.**
-- **Ningún texto que vea el usuario va escrito en un componente.** Todos viven en `shared/config/copy.ts`. Hay traducción en el roadmap.
+- **Ningún texto que vea el usuario va escrito en un componente.** Todos viven en `shared/config/copy.ts`. La interfaz es en español; lo que se traduce al inglés es el CV, no la app.
 - **Sin emojis** en el código, los comentarios, los mensajes de commit ni la interfaz. Donde harías una marca visual, usá un icono de Lucide o palabras.
 - **`strict` de TypeScript está prendido, y `noUncheckedIndexedAccess` también.** Indexar un array devuelve `T | undefined`: manejalo, no lo silencies con `!`.
 - **Los componentes de `shared/ui` no llevan `margin`.** Solo `padding` y `gap`; la separación la decide el contenedor.
@@ -67,6 +67,8 @@ La plantilla Harvard tiene restricciones que **no son decorativas**: una columna
 No lo agregues sin que te lo pidan:
 
 - Cualquier integración con modelos de lenguaje, incluida una clave de API del usuario.
+- Traducir con un servicio externo. La traducción usa solo el traductor integrado del navegador, que corre en el dispositivo (`domain/translate/browserTranslator.ts`); si no está, se escribe a mano.
+- Guardar el inglés como un segundo CV completo. Es una capa de textos sobre el español (`domain/resume/translation.ts`): los hechos viven una sola vez.
 - Cuentas, login, backend, base de datos.
 - Un puntaje numérico de compatibilidad con filtros automáticos: no existe un estándar público, un número inventado es humo.
 - Analítica o telemetría.

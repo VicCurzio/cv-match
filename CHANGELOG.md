@@ -5,7 +5,21 @@ Versionado según [SemVer](https://semver.org/lang/es/).
 
 ## [No publicado]
 
+### Agregado: el CV en inglés (probado de punta a punta)
+
+- **Selector de idioma en el CV base: Español o English.** En inglés, el formulario muestra cada texto del CV con su español al lado y el inglés editable.
+- **"Traducir al inglés"** usa el traductor integrado de Chrome y Edge de computadora, que corre en el dispositivo: el CV no se manda a ningún lado y no hace falta clave.
+- Los puestos, habilidades, idiomas y niveles salen de un glosario; los nombres de la persona, empresas, instituciones y sistemas conocidos no se traducen; los títulos de estudio quedan en español con su significado entre paréntesis; las horas de los cursos se pasan a formato inglés.
+- **Marcas para revisar:** un puesto que no está en el glosario, un número que no coincide con el español o un nombre propio que el traductor pudo haber cambiado.
+- **El inglés se guarda como capa sobre el CV en español**, con cada CV. Fechas, empresas y contacto salen siempre del español. Si un texto en español cambia después de traducirlo, se imprime en español y se marca hasta revisarlo; "Traducir lo que falta" manda solo eso y respeta lo corregido a mano.
+- Las plantillas imprimen títulos de sección, meses, "Present" e "In progress" en inglés, y el archivo se llama `Nombre-Resume.pdf`.
+- Sin traductor en el navegador (celular, Firefox, Safari) la app lo dice y el inglés se escribe a mano. Lo mismo si el navegador trae el traductor pero no contesta: pasa en un navegador basado en Chromium probado durante el desarrollo, que expone la API y nunca responde. La app deja de esperar a los 8 segundos, y una traducción colgada a los 30.
+- En inglés se sugiere pasar al mercado Internacional. Las versiones por aviso y la carta siguen en español.
+- El formato guardado no cambia de versión: la traducción es un campo opcional, así que todo lo guardado antes sigue leyéndose igual.
+
 ### Cambiado
+
+- El puerto de generación (`domain/generate`) queda solo para la carta: la traducción ya no espera detrás de él.
 
 - Las copias `.json` se descargan con el nombre de la persona (`cv-match-Laura-Perez.json`). Con varios CV, todas se llamaban `cv-match.json` y en la carpeta de descargas no se sabía de quién era cada una.
 

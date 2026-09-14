@@ -56,6 +56,15 @@ describe('a finding names the job well enough to find it', () => {
     expect(bulletsStartWithVerb(weak, ctx)[0]?.problem).toContain('F31 SRL')
   })
 
+  it('says nothing about the verbs of an English resume, which the Spanish list cannot judge', () => {
+    const english: Resume = {
+      ...twoSameTitle,
+      experience: [{ ...twoSameTitle.experience[1]!, bullets: ['Coordination of supplier orders for 12 stores.'] }],
+    }
+    expect(bulletsStartWithVerb(english, ctx)).toHaveLength(1)
+    expect(bulletsStartWithVerb(english, { ...ctx, locale: 'en' })).toEqual([])
+  })
+
   it('falls back to the role alone when there is no company yet', () => {
     const noCompany: Resume = {
       ...twoSameTitle,

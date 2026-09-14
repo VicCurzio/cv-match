@@ -1,6 +1,7 @@
 import { z } from 'zod'
 import { emptyResume, resumeSchema } from './resumeSchema'
 import { defaultSettings, settingsSchema } from './settings'
+import { translationSchema } from './translation'
 import { versionSchema } from './versions'
 
 /**
@@ -91,10 +92,19 @@ export const baseLetterSchema = z.strictObject({
 
 export type BaseLetter = z.infer<typeof baseLetterSchema>
 
-/** One resume in the library: a version 2 document with an id, and its base letter. */
+/**
+ * One resume in the library: a version 2 document with an id, its base letter
+ * and its English layer (feature 0009, ADR 0008).
+ *
+ * The translation is optional, so every library saved before it still
+ * validates as it is: nothing to migrate. `resumes.en` stays in the shape for
+ * the same reason, and stays unused -- a second full resume would copy the
+ * facts, and a fact corrected in one language would stay wrong in the other.
+ */
 export const cvSchema = documentSchema.omit({ schemaVersion: true }).extend({
   id: z.string(),
   letter: baseLetterSchema.optional(),
+  translation: translationSchema.optional(),
 })
 
 export type StoredCv = z.infer<typeof cvSchema>

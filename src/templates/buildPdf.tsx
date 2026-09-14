@@ -6,6 +6,7 @@ import { HarvardResume } from '@/templates/harvard/HarvardResume'
 import { CoverLetter } from '@/templates/letter/CoverLetter'
 import { ModernResume } from '@/templates/modern/ModernResume'
 import { fileName } from '@/templates/shared/format'
+import type { Locale } from '@/templates/shared/labels'
 import { disableHyphenation } from '@/templates/shared/typography'
 
 // Global font setting, applied once when this module loads.
@@ -24,6 +25,8 @@ export interface BuildOptions {
   profile: MarketProfile
   atsMode: boolean
   template: TemplateId
+  /** The language the template's own words are printed in. Spanish when absent. */
+  locale?: Locale
 }
 
 /**
@@ -37,17 +40,18 @@ export async function buildPdf(resume: Resume, options: BuildOptions): Promise<B
 
   // ATS mode forces the single-column template whatever is selected.
   const useHarvard = options.atsMode || options.template === 'harvard'
+  const locale = options.locale ?? 'es'
   const document = useHarvard ? (
-    <HarvardResume resume={forExport} />
+    <HarvardResume resume={forExport} locale={locale} />
   ) : (
-    <ModernResume resume={forExport} />
+    <ModernResume resume={forExport} locale={locale} />
   )
 
   return pdf(document).toBlob()
 }
 
-export function resumeFileName(resume: Resume, company?: string): string {
-  return fileName(resume, company)
+export function resumeFileName(resume: Resume, company?: string, locale: Locale = 'es'): string {
+  return fileName(resume, company, locale === 'en' ? 'Resume' : 'CV')
 }
 
 /**

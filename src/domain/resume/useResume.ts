@@ -16,6 +16,7 @@ import {
   type StoredCv,
   type StoredLibrary,
 } from './storage'
+import { listSegments, resolveTranslation, type Locale, type SegmentRow, type Translation } from './translation'
 import { createVersion, resolveVersion, type Version } from './versions'
 
 const SAVE_DELAY_MS = 500
@@ -38,6 +39,19 @@ export interface ResumeState {
   resume: Resume
   /** The facts of the open resume. The only resume the full form edits. */
   base: Resume
+  /**
+   * The language on screen. English applies to the base only: while a version
+   * is selected this is `es`, whatever was chosen (versions are Spanish-only).
+   */
+  locale: Locale
+  /** What was chosen, saved with the resume. */
+  chosenLocale: Locale
+  setLocale: (locale: Locale) => void
+  /** The open resume's English layer, when one was started. */
+  translation: Translation | undefined
+  setTranslation: (next: Translation | ((current: Translation | undefined) => Translation)) => void
+  /** Every text of the base with its translation state, in resume order. */
+  segments: SegmentRow[]
   versions: Version[]
   /** `null` while the base itself is selected. */
   activeVersion: Version | null
@@ -130,6 +144,8 @@ export function useResume(selectedVersionId?: string | null): ResumeState {
   const [baseSettings, setBaseSettings] = useState<Settings>(first.settings)
   const [versions, setVersions] = useState<Version[]>(first.versions)
   const [baseLetter, setBaseLetter] = useState<BaseLetter | undefined>(first.letter)
+  const [chosenLocale, setChosenLocale] = useState<Locale>(first.activeLocale)
+  const [translation, setTranslationState] = useState<Translation | undefined>(first.translation)
   const [activeVersionId, setActiveVersionId] = useState<string | null>(
     // `null` from the address means the base; only `undefined` defers to what was saved.
     () => (selectedVersionId !== undefined ? selectedVersionId : first.activeVersionId),
@@ -167,20 +183,26 @@ export function useResume(selectedVersionId?: string | null): ResumeState {
   // An id pointing at a deleted version selects the base rather than nothing.
   const activeVersion = versions.find((version) => version.id === activeVersionId) ?? null
 
-  const resume = useMemo(() => resolveVersion(base, activeVersion), [base, activeVersion])
+  const locale: Locale = activeVersion ? 'es' : chosenLocale
+  const segments = useMemo(() => listSegments(base, translation), [base, translation])
+  const resume = useMemo(
+    () => (locale === 'en' ? resolveTranslation(base, translation).resume : resolveVersion(base, activeVersion)),
+    [base, activeVersion, locale, translation],
+  )
   const settings = activeVersion ? activeVersion.settings : baseSettings
 
   const currentCv = useCallback(
     (): StoredCv => ({
       id: openId,
       settings: baseSettings,
-      activeLocale: 'es',
+      activeLocale: chosenLocale,
       resumes: { es: base },
       versions,
       activeVersionId: activeVersion?.id ?? null,
       ...(baseLetter ? { letter: baseLetter } : {}),
+      ...(translation ? { translation } : {}),
     }),
-    [openId, base, baseSettings, versions, activeVersion, baseLetter],
+    [openId, base, baseSettings, versions, activeVersion, baseLetter, chosenLocale, translation],
   )
 
   /**
@@ -244,6 +266,8 @@ export function useResume(selectedVersionId?: string | null): ResumeState {
       setBaseSettings(next.settings)
       setVersions(next.versions)
       setBaseLetter(next.letter)
+      setChosenLocale(next.activeLocale)
+      setTranslationState(next.translation)
       setActiveVersionId(next.activeVersionId)
     },
     [currentCv],
@@ -282,6 +306,8 @@ export function useResume(selectedVersionId?: string | null): ResumeState {
       setBaseSettings(next.settings)
       setVersions(next.versions)
       setBaseLetter(next.letter)
+      setChosenLocale(next.activeLocale)
+      setTranslationState(next.translation)
       setActiveVersionId(next.activeVersionId)
     },
     [openId, shelf],
@@ -325,6 +351,13 @@ export function useResume(selectedVersionId?: string | null): ResumeState {
 
   const replaceAll = useCallback((next: Resume) => setBase(next), [])
 
+  const setTranslation = useCallback(
+    (next: Translation | ((current: Translation | undefined) => Translation)) => {
+      setTranslationState((current) => (typeof next === 'function' ? next(current) : next))
+    },
+    [],
+  )
+
   const addVersion = useCallback(
     (input: { company: string; role: string; posting?: string }) => {
       const version = createVersion({ ...input, id: newId('ver') }, settings)
@@ -357,6 +390,12 @@ export function useResume(selectedVersionId?: string | null): ResumeState {
   return {
     resume,
     base,
+    locale,
+    chosenLocale,
+    setLocale: setChosenLocale,
+    translation,
+    setTranslation,
+    segments,
     versions,
     activeVersion,
     activeVersionId,

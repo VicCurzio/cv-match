@@ -2,6 +2,7 @@ import { Children } from 'react'
 import { Document, Image, Page, StyleSheet, Text, View } from '@react-pdf/renderer'
 import type { Resume } from '@/domain/resume/resumeSchema'
 import { PAGE, formatRange, formatYearMonth, languageLevel } from '@/templates/shared/format'
+import { LABELS, type Locale } from '@/templates/shared/labels'
 
 /**
  * The template for when a person reads the resume: a mail to a small company, a
@@ -106,6 +107,8 @@ const styles = StyleSheet.create({
 
 interface Props {
   resume: Resume
+  /** The language of the words the template adds: headings, months, "present". */
+  locale?: Locale
 }
 
 /**
@@ -130,7 +133,8 @@ function MainSection({ title, children }: { title: string; children: React.React
   )
 }
 
-export function ModernResume({ resume }: Props) {
+export function ModernResume({ resume, locale = 'es' }: Props) {
+  const l = LABELS[locale]
   const { personal } = resume
   const place = [personal.city, personal.province, personal.country].filter(Boolean).join(', ')
   const contactItems = [personal.phone, personal.email, place, personal.linkedin, personal.website]
@@ -138,7 +142,7 @@ export function ModernResume({ resume }: Props) {
   const skills = resume.skills.filter((s) => s.trim())
 
   return (
-    <Document title={`${personal.fullName} - CV`} author={personal.fullName} language="es">
+    <Document title={`${personal.fullName} - ${l.documentKind}`} author={personal.fullName} language={locale}>
       <Page size="A4" style={styles.page}>
         {/* Behind the columns, repeated on every page. */}
         <View style={styles.band} fixed />
@@ -146,7 +150,7 @@ export function ModernResume({ resume }: Props) {
         <View style={styles.sidebar}>
           {personal.photo ? <Image style={styles.photo} src={personal.photo} /> : null}
 
-          <Text style={styles.sideTitle}>CONTACTO</Text>
+          <Text style={styles.sideTitle}>{l.contact}</Text>
           {contactItems.map((item, index) => (
             <Text key={index} style={styles.sideItem}>
               {item}
@@ -155,7 +159,7 @@ export function ModernResume({ resume }: Props) {
 
           {skills.length > 0 ? (
             <>
-              <Text style={styles.sideTitle}>HABILIDADES</Text>
+              <Text style={styles.sideTitle}>{l.skills}</Text>
               {skills.map((skill, index) => (
                 <Text key={index} style={styles.sideItem}>
                   {skill}
@@ -166,10 +170,10 @@ export function ModernResume({ resume }: Props) {
 
           {resume.languages.length > 0 ? (
             <>
-              <Text style={styles.sideTitle}>IDIOMAS</Text>
+              <Text style={styles.sideTitle}>{l.languages}</Text>
               {resume.languages.map((language) => (
                 <Text key={language.id} style={styles.sideItem}>
-                  {languageLevel(language) ? `${language.name} - ${languageLevel(language)}` : language.name}
+                  {languageLevel(language, locale) ? `${language.name} - ${languageLevel(language, locale)}` : language.name}
                 </Text>
               ))}
             </>
@@ -178,25 +182,25 @@ export function ModernResume({ resume }: Props) {
 
         <View style={styles.main}>
           <View wrap={false}>
-            <Text style={styles.name}>{personal.fullName || 'Tu nombre'}</Text>
+            <Text style={styles.name}>{personal.fullName || l.placeholderName}</Text>
             {personal.headline ? <Text style={styles.headline}>{personal.headline}</Text> : null}
           </View>
 
           {resume.summary.trim() ? (
-            <MainSection title="PERFIL PROFESIONAL">
+            <MainSection title={l.summary}>
               <Text style={styles.summary}>{resume.summary}</Text>
             </MainSection>
           ) : null}
 
           {resume.experience.length > 0 ? (
-            <MainSection title="EXPERIENCIA LABORAL">
+            <MainSection title={l.experience}>
               {resume.experience.map((item) => (
                 <View key={item.id} style={styles.entry} wrap={false}>
                   <Text style={styles.role}>{item.role}</Text>
                   <Text style={styles.company}>
                     {[item.company, item.location].filter(Boolean).join(' - ')}
                   </Text>
-                  <Text style={styles.dates}>{formatRange(item)}</Text>
+                  <Text style={styles.dates}>{formatRange(item, locale)}</Text>
                   {item.bullets
                     .filter((b) => b.trim())
                     .map((bullet, index) => (
@@ -211,13 +215,13 @@ export function ModernResume({ resume }: Props) {
           ) : null}
 
           {resume.education.length > 0 ? (
-            <MainSection title="EDUCACIÓN">
+            <MainSection title={l.education}>
               {resume.education.map((item) => (
                 <View key={item.id} style={styles.entry} wrap={false}>
                   <Text style={styles.role}>{item.title}</Text>
                   <Text style={styles.company}>{item.institution}</Text>
                   <Text style={styles.dates}>
-                    {item.inProgress ? 'en curso' : formatYearMonth(item.endDate)}
+                    {item.inProgress ? l.inProgress : formatYearMonth(item.endDate, locale)}
                   </Text>
                 </View>
               ))}
@@ -225,7 +229,7 @@ export function ModernResume({ resume }: Props) {
           ) : null}
 
           {resume.courses.length > 0 ? (
-            <MainSection title="CURSOS Y CERTIFICACIONES">
+            <MainSection title={l.courses}>
               {resume.courses.map((item) => (
                 <View key={item.id} style={styles.entry} wrap={false}>
                   <Text style={styles.role}>{item.title}</Text>
@@ -233,7 +237,7 @@ export function ModernResume({ resume }: Props) {
                     {[item.institution, item.detail].filter(Boolean).join(' - ')}
                   </Text>
                   <Text style={styles.dates}>
-                    {item.inProgress ? 'en curso' : formatYearMonth(item.endDate)}
+                    {item.inProgress ? l.inProgress : formatYearMonth(item.endDate, locale)}
                   </Text>
                 </View>
               ))}

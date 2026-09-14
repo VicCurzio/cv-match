@@ -41,6 +41,11 @@ export interface RuleContext {
   atsMode: boolean
   template: 'harvard' | 'modern'
   /**
+   * The language of the resume being judged. Spanish when absent. Rules that
+   * read Spanish words (the action verbs) have nothing to say about English text.
+   */
+  locale?: 'es' | 'en'
+  /**
    * Measured from the rendered PDF, when one exists. Rules prefer these over
    * their own estimates: a line-count guess was off by a factor of seven on the
    * first real resume it met. Absent in tests that only care about content.

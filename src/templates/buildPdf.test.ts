@@ -48,6 +48,29 @@ describe('the exported PDF contains real text, not a picture of text', () => {
 })
 
 /**
+ * The English resume is the same template with English headings. Without
+ * these, a translated resume went out with "EXPERIENCIA LABORAL" over English
+ * text -- the first thing an English-reading recruiter sees.
+ */
+describe('an English resume prints the template in English', () => {
+  it.each(['harvard', 'modern'] as const)('uses English headings, months and "Present" in %s', async (template) => {
+    const pdf = await render({ profile: INTL_PROFILE, atsMode: false, template, locale: 'en' })
+
+    for (const heading of ['PROFESSIONAL SUMMARY', 'WORK EXPERIENCE', 'EDUCATION', 'SKILLS', 'LANGUAGES']) {
+      expect(pdf.lines).toContain(heading)
+    }
+    expect(pdf.text).toContain('Present')
+    expect(pdf.text).not.toContain('EXPERIENCIA LABORAL')
+    expect(pdf.text).not.toContain('actualidad')
+  })
+
+  it('stays in Spanish when no language is given', async () => {
+    const pdf = await render({ profile: AR_PROFILE, atsMode: false, template: 'harvard' })
+    expect(pdf.lines).toContain('EXPERIENCIA LABORAL')
+  })
+})
+
+/**
  * Caught in the browser on day one: react-pdf hyphenates with an English
  * dictionary and split the email across two lines as `anagomez1992@exam-` /
  * `ple.com`. Whoever copies that gets a broken address, on the one field that

@@ -203,6 +203,65 @@ export const copy = {
     byHand: 'Cargar a mano',
   },
 
+  translation: {
+    languageLabel: 'Idioma del CV',
+    spanish: 'Español',
+    english: 'English',
+    title: 'Traducción al inglés',
+    textsTitle: 'Textos en inglés',
+    subtitle:
+      'Los datos (fechas, empresas, contacto) salen del CV en español. Acá solo se traduce lo que está escrito en palabras.',
+    onDevice:
+      'La traducción la hace tu navegador, en tu computadora. El CV no se manda a ningún lado.',
+    draft:
+      'Es un borrador: los puestos, habilidades e idiomas salen de un glosario y el resto lo traduce el navegador. Leelo entero antes de mandarlo.',
+    checking: 'Fijándonos si tu navegador puede traducir...',
+    unsupported:
+      'Tu navegador no trae traductor. Funciona en Chrome o Edge de computadora (no en el celular). Igual podés escribir el inglés a mano en cada campo.',
+    unavailable:
+      'Tu navegador no puede traducir de español a inglés en esta computadora. Podés escribir el inglés a mano en cada campo.',
+    translate: 'Traducir al inglés',
+    translateRest: (count: number) => `Traducir lo que falta (${count})`,
+    downloading: (percent: number) => `Tu navegador está bajando el traductor: ${percent}%`,
+    running: (done: number, total: number) => `Traduciendo ${done} de ${total}...`,
+    failed:
+      'No se pudo traducir. Probá de nuevo; si sigue fallando, podés escribir el inglés a mano en cada campo.',
+    progress: (translated: number, total: number) => `Traducido: ${translated} de ${total}.`,
+    toReview: (count: number) => (count === 1 ? '1 para revisar.' : `${count} para revisar.`),
+    allDone: 'Todo traducido.',
+    suggestMarket:
+      'Un CV en inglés suele ir afuera: en el mercado Internacional el CV sale sin foto ni datos personales.',
+    useInternational: 'Usar mercado Internacional',
+    onlyPending: 'Mostrar solo lo que falta o hay que revisar',
+    nothingPending: 'No queda nada pendiente ni para revisar.',
+    empty: 'Todavía no escribiste nada en el CV en español.',
+    inSpanish: 'En español:',
+    englishLabel: (field: string) => `${field} en inglés`,
+    state: {
+      missing: 'Sin traducir: se imprime en español.',
+      changed: 'El español cambió desde que se tradujo: se imprime en español hasta que revises el inglés.',
+    },
+    review: {
+      'title-not-in-glossary':
+        'Este puesto no está en nuestro glosario: fijate que sea el nombre que se usa en inglés.',
+      'numbers-changed': 'Los números no coinciden con el español.',
+      'protected-term-lost': 'Puede que se haya traducido un nombre propio.',
+    },
+    field: {
+      headline: 'Título',
+      summary: 'Perfil profesional',
+      role: (company: string) => (company ? `Puesto en ${company}` : 'Puesto'),
+      bullet: (company: string) => (company ? `Punto de ${company}` : 'Punto'),
+      education: 'Título de estudio',
+      courseTitle: 'Curso',
+      courseDetail: (title: string) => (title ? `Detalle de ${title}` : 'Detalle del curso'),
+      skill: 'Habilidad',
+      languageName: 'Idioma',
+      languageLevel: (name: string) => (name ? `Nivel de ${name}` : 'Nivel'),
+    },
+    editSpanish: 'Editar el CV en español',
+  },
+
   photo: {
     label: 'Foto',
     add: 'Subir foto',

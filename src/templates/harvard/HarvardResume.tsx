@@ -1,6 +1,7 @@
 import { Children } from 'react'
 import { Document, Page, StyleSheet, Text, View } from '@react-pdf/renderer'
 import type { Resume } from '@/domain/resume/resumeSchema'
+import { LABELS, type Locale } from '@/templates/shared/labels'
 import {
   PAGE,
   contactParts,
@@ -105,6 +106,8 @@ const styles = StyleSheet.create({
 
 interface Props {
   resume: Resume
+  /** The language of the words the template adds: headings, months, "present". */
+  locale?: Locale
 }
 
 /**
@@ -141,19 +144,20 @@ function Section({ title, children }: { title: string; children: React.ReactNode
   )
 }
 
-export function HarvardResume({ resume }: Props) {
+export function HarvardResume({ resume, locale = 'es' }: Props) {
+  const l = LABELS[locale]
   const contact = contactParts(resume)
   const skills = resume.skills.filter((s) => s.trim())
 
   return (
     <Document
-      title={`${resume.personal.fullName} - CV`}
+      title={`${resume.personal.fullName} - ${l.documentKind}`}
       author={resume.personal.fullName}
-      language="es"
+      language={locale}
     >
       <Page size="A4" style={styles.page}>
         <View style={styles.header} wrap={false}>
-          <Text style={styles.name}>{resume.personal.fullName || 'Tu nombre'}</Text>
+          <Text style={styles.name}>{resume.personal.fullName || l.placeholderName}</Text>
           {resume.personal.headline ? (
             <Text style={styles.headline}>{resume.personal.headline}</Text>
           ) : null}
@@ -163,18 +167,18 @@ export function HarvardResume({ resume }: Props) {
         </View>
 
         {resume.summary.trim() ? (
-          <Section title="PERFIL PROFESIONAL">
+          <Section title={l.summary}>
             <Text style={styles.summary}>{resume.summary}</Text>
           </Section>
         ) : null}
 
         {resume.experience.length > 0 ? (
-          <Section title="EXPERIENCIA LABORAL">
+          <Section title={l.experience}>
             {resume.experience.map((item) => (
               <View key={item.id} style={styles.entry} wrap={false}>
                 <View style={styles.entryHead}>
                   <Text style={styles.role}>{item.role}</Text>
-                  <Text style={styles.dates}>{formatRange(item)}</Text>
+                  <Text style={styles.dates}>{formatRange(item, locale)}</Text>
                 </View>
                 <Text style={styles.company}>
                   {[item.company, item.location].filter(Boolean).join(' - ')}
@@ -193,13 +197,13 @@ export function HarvardResume({ resume }: Props) {
         ) : null}
 
         {resume.education.length > 0 ? (
-          <Section title="EDUCACIÓN">
+          <Section title={l.education}>
             {resume.education.map((item) => (
               <View key={item.id} style={styles.entry} wrap={false}>
                 <View style={styles.entryHead}>
                   <Text style={styles.role}>{item.title}</Text>
                   <Text style={styles.dates}>
-                    {item.inProgress ? 'en curso' : formatYearMonth(item.endDate)}
+                    {item.inProgress ? l.inProgress : formatYearMonth(item.endDate, locale)}
                   </Text>
                 </View>
                 <Text style={styles.company}>{item.institution}</Text>
@@ -209,13 +213,13 @@ export function HarvardResume({ resume }: Props) {
         ) : null}
 
         {resume.courses.length > 0 ? (
-          <Section title="CURSOS Y CERTIFICACIONES">
+          <Section title={l.courses}>
             {resume.courses.map((item) => (
               <View key={item.id} style={styles.entry} wrap={false}>
                 <View style={styles.entryHead}>
                   <Text style={styles.role}>{item.title}</Text>
                   <Text style={styles.dates}>
-                    {item.inProgress ? 'en curso' : formatYearMonth(item.endDate)}
+                    {item.inProgress ? l.inProgress : formatYearMonth(item.endDate, locale)}
                   </Text>
                 </View>
                 <Text style={styles.company}>
@@ -227,7 +231,7 @@ export function HarvardResume({ resume }: Props) {
         ) : null}
 
         {skills.length > 0 ? (
-          <Section title="HABILIDADES">
+          <Section title={l.skills}>
             <View style={styles.tagRow}>
               {skills.flatMap((skill, index) => [
                 ...(index > 0
@@ -246,7 +250,7 @@ export function HarvardResume({ resume }: Props) {
         ) : null}
 
         {resume.languages.length > 0 ? (
-          <Section title="IDIOMAS">
+          <Section title={l.languages}>
             <View style={styles.tagRow}>
               {resume.languages.flatMap((language, index) => [
                 ...(index > 0
@@ -257,7 +261,7 @@ export function HarvardResume({ resume }: Props) {
                     ]
                   : []),
                 <Text key={language.id} style={styles.tag}>
-                  {languageLevel(language) ? `${language.name} (${languageLevel(language)})` : language.name}
+                  {languageLevel(language, locale) ? `${language.name} (${languageLevel(language, locale)})` : language.name}
                 </Text>,
               ])}
             </View>

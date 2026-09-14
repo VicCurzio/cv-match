@@ -6,6 +6,7 @@ import {
   type Resume,
 } from '@/domain/resume/resumeSchema'
 import { listOf } from '@/shared/utils/text'
+import { LABELS, type Locale } from './labels'
 
 /** Page geometry, shared by every template. A4 with 18 mm margins, in points. */
 export const PAGE = {
@@ -18,23 +19,18 @@ export const PAGE = {
   rule: '#c8c8d0',
 } as const
 
-const MONTHS = [
-  'ene', 'feb', 'mar', 'abr', 'may', 'jun',
-  'jul', 'ago', 'sep', 'oct', 'nov', 'dic',
-]
-
-/** `2024-03` becomes `mar 2024`. One format, used everywhere in the document. */
-export function formatYearMonth(value: string | undefined | null): string {
+/** `2024-03` becomes `mar 2024` (or `Mar 2024`). One format, used everywhere in the document. */
+export function formatYearMonth(value: string | undefined | null, locale: Locale = 'es'): string {
   if (!value) return ''
   const match = /^(\d{4})-(\d{2})$/.exec(value)
   if (!match) return value
-  const month = MONTHS[Number(match[2]) - 1]
+  const month = LABELS[locale].months[Number(match[2]) - 1]
   return month ? `${month} ${match[1]}` : match[1] ?? value
 }
 
-export function formatRange(item: ExperienceItem): string {
-  const start = formatYearMonth(item.startDate)
-  const end = item.endDate === null ? 'actualidad' : formatYearMonth(item.endDate)
+export function formatRange(item: ExperienceItem, locale: Locale = 'es'): string {
+  const start = formatYearMonth(item.startDate, locale)
+  const end = item.endDate === null ? LABELS[locale].present : formatYearMonth(item.endDate, locale)
   return end ? `${start} - ${end}` : start
 }
 
@@ -65,7 +61,7 @@ function slug(text: string): string {
  * with five files in their downloads, and five identical names is how the
  * wrong one gets attached.
  */
-export function fileName(resume: Resume, company?: string, kind: 'CV' | 'Carta' = 'CV'): string {
+export function fileName(resume: Resume, company?: string, kind: 'CV' | 'Carta' | 'Resume' = 'CV'): string {
   const name = slug(resume.personal.fullName) || 'CV'
   const target = company ? slug(company) : ''
   return target ? `${name}-${kind}-${target}.pdf` : `${name}-${kind}.pdf`
@@ -81,12 +77,8 @@ export function copyFileName(fullName: string): string {
   return name ? `cv-match-${name}.json` : 'cv-match-copia.json'
 }
 
-export const ABILITY_LABEL: Record<LanguageAbility, string> = {
-  reading: 'lectura',
-  listening: 'comprensión oral',
-  speaking: 'conversación',
-  writing: 'escritura',
-}
+/** The Spanish labels, for the editor's own screens. */
+export const ABILITY_LABEL: Record<LanguageAbility, string> = LABELS.es.abilities
 
 /**
  * `A2, lectura y comprensión oral`, or just `B2` when nothing is qualified.
@@ -97,10 +89,17 @@ export const ABILITY_LABEL: Record<LanguageAbility, string> = {
  * All four abilities marked says nothing a level does not already say, so it
  * prints as the level alone rather than as a list that reads like padding.
  */
-export function languageLevel(language: LanguageItem): string {
+export function languageLevel(language: LanguageItem, locale: Locale = 'es'): string {
   const level = language.level.trim()
   const abilities = LANGUAGE_ABILITIES.filter((ability) => language.abilities?.includes(ability))
   const qualified = abilities.length > 0 && abilities.length < LANGUAGE_ABILITIES.length
-  const detail = qualified ? listOf(abilities.map((ability) => ABILITY_LABEL[ability])) : ''
+  const labels = abilities.map((ability) => LABELS[locale].abilities[ability])
+  const detail = !qualified
+    ? ''
+    : locale === 'es'
+      ? listOf(labels)
+      : labels.length <= 1
+        ? (labels[0] ?? '')
+        : `${labels.slice(0, -1).join(', ')} ${LABELS.en.and} ${labels.at(-1)}`
   return [level, detail].filter(Boolean).join(', ')
 }

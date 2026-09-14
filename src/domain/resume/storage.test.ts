@@ -102,6 +102,32 @@ describe('a copy read from a file is validated and added, never replacing anythi
     expect(result.ok && result.cvs[0]?.resumes.es).toEqual(cleanAr)
   })
 
+  it('keeps the English layer of a resume, in the saved library and in a copy', () => {
+    const translated: StoredCv = {
+      ...(library.cvs[1] as StoredCv),
+      activeLocale: 'en',
+      translation: {
+        headline: { source: 'Administrativa', text: 'Administrative Assistant' },
+        summary: { source: 'Perfil.', text: 'Profile.', review: 'numbers-changed' },
+        experience: {},
+        education: {},
+        courses: {},
+        skills: [],
+        languages: {},
+      },
+    }
+    const saved = { ...library, cvs: [translated] }
+    expect(librarySchema.parse(saved)).toEqual(saved)
+    const result = parseCopy(JSON.stringify(exportCv(translated)))
+    expect(result.ok && result.cvs).toEqual([translated])
+  })
+
+  it('a library saved before translation existed still reads as it is', () => {
+    const before = JSON.parse(JSON.stringify(library)) as StoredLibrary
+    expect(before.cvs.every((cv) => cv.translation === undefined)).toBe(true)
+    expect(upgradeLibrary(before)).toEqual(library)
+  })
+
   it('reads every resume of a library copy, letters included', () => {
     const result = parseCopy(JSON.stringify(library))
     expect(result.ok && result.cvs).toEqual(library.cvs)

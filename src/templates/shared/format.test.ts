@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { cleanAr } from '@/test/fixtures'
-import { copyFileName, fileName, languageLevel } from './format'
+import { copyFileName, fileName, formatRange, formatYearMonth, languageLevel } from './format'
 
 describe('file names', () => {
   it('names the base resume after the person', () => {
@@ -17,6 +17,23 @@ describe('file names', () => {
 
   it('drops characters a file system or a mail client would mangle', () => {
     expect(fileName(cleanAr, 'Pérez & Hijos S.A.')).toBe('Ana-Gómez-Ruiz-CV-Pérez-Hijos-SA.pdf')
+  })
+})
+
+describe('in English', () => {
+  it('writes months and the current job the English way', () => {
+    expect(formatYearMonth('2024-03', 'en')).toBe('Mar 2024')
+    expect(formatRange({ ...cleanAr.experience[0]!, startDate: '2021-03', endDate: null }, 'en')).toBe('Mar 2021 - Present')
+    expect(formatRange({ ...cleanAr.experience[0]!, startDate: '2021-03', endDate: null })).toBe('mar 2021 - actualidad')
+  })
+
+  it('names the abilities in English, joined with "and"', () => {
+    const language = { id: 'l', name: 'Spanish', level: 'A2', abilities: ['reading' as const, 'listening' as const] }
+    expect(languageLevel(language, 'en')).toBe('A2, reading and listening')
+  })
+
+  it('an English resume is a Resume, not a CV, in its file name', () => {
+    expect(fileName(cleanAr, undefined, 'Resume')).toMatch(/-Resume\.pdf$/)
   })
 })
 

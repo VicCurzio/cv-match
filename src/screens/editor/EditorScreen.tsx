@@ -23,6 +23,7 @@ import { copyFileName } from '@/templates/shared/format'
 import { PdfLightbox, PdfPagePlaceholder, PdfPages } from './PdfPages'
 import { usePdfDocument } from './usePdfDocument'
 import { ResumeForm } from './ResumeForm'
+import { TranslationForm } from './TranslationForm'
 import { DeleteVersionDialog, NewVersionDialog } from './VersionDialogs'
 import { VersionForm } from './VersionForm'
 import { usePdfPreview } from './usePdfPreview'
@@ -30,7 +31,7 @@ import { usePdfPreview } from './usePdfPreview'
 export function EditorScreen({ state }: { state: ResumeState }) {
   const { resume, settings, setResume, setSettings, replaceAll, saveError } = state
   const { unreadable, dismissUnreadable } = state
-  const { base, versions, activeVersion, updateVersion } = state
+  const { base, versions, activeVersion, updateVersion, locale } = state
   const navigate = useNavigate()
   const location = useLocation()
 
@@ -53,8 +54,8 @@ export function EditorScreen({ state }: { state: ResumeState }) {
   const profile = MARKET_PROFILES[settings.market]
 
   const buildOptions = useMemo(
-    () => ({ profile, atsMode: settings.atsMode, template: settings.template }),
-    [profile, settings.atsMode, settings.template],
+    () => ({ profile, atsMode: settings.atsMode, template: settings.template, locale }),
+    [profile, settings.atsMode, settings.template, locale],
   )
 
   const preview = usePdfPreview(resume, buildOptions)
@@ -75,11 +76,12 @@ export function EditorScreen({ state }: { state: ResumeState }) {
         profile,
         atsMode: settings.atsMode,
         template: settings.template,
+        locale,
         // Measured from the rendered file, so the length rules judge the
         // document instead of guessing at it.
         ...(preview.layout ? { layout: preview.layout } : {}),
       }),
-    [resume, profile, settings.atsMode, settings.template, preview.layout],
+    [resume, profile, settings.atsMode, settings.template, locale, preview.layout],
   )
 
   /**
@@ -227,7 +229,21 @@ export function EditorScreen({ state }: { state: ResumeState }) {
             <Trash2 />
             {copy.versions.remove}
           </Button>
-        ) : null}
+        ) : (
+          // English is a layer over the base; versions stay in Spanish (ADR 0008).
+          <select
+            aria-label={copy.translation.languageLabel}
+            className="h-9 min-w-0 max-w-full rounded-lg border border-border bg-card px-3 text-sm"
+            value={locale}
+            onChange={(e) => {
+              state.setLocale(e.target.value === 'en' ? 'en' : 'es')
+              setMessage(null)
+            }}
+          >
+            <option value="es">{copy.translation.spanish}</option>
+            <option value="en">{copy.translation.english}</option>
+          </select>
+        )}
       </div>
 
       {/*
@@ -263,6 +279,16 @@ export function EditorScreen({ state }: { state: ResumeState }) {
                 setMessage(null)
               }}
             />
+          ) : locale === 'en' ? (
+            <TranslationForm
+              base={base}
+              segments={state.segments}
+              translation={state.translation}
+              onChange={state.setTranslation}
+              market={settings.market}
+              onUseInternational={() => changeMarket('INTL')}
+              onEditSpanish={() => state.setLocale('es')}
+            />
           ) : (
             <ResumeForm
               resume={base}
@@ -282,7 +308,7 @@ export function EditorScreen({ state }: { state: ResumeState }) {
               // version the Blob is still the previous version's, and it would
               // download under the new version's file name.
               disabled={!preview.blob || preview.building}
-              onClick={() => preview.blob && downloadBlob(preview.blob, resumeFileName(resume, activeVersion?.company))}
+              onClick={() => preview.blob && downloadBlob(preview.blob, resumeFileName(resume, activeVersion?.company, locale))}
             >
               <Download />
               {preview.building ? copy.editor.building : copy.editor.download}
@@ -342,7 +368,8 @@ export function EditorScreen({ state }: { state: ResumeState }) {
 
       {writingLetter ? (
         <LetterDialog
-          resume={resume}
+          // The letter is written in Spanish, so it reads the Spanish resume.
+          resume={locale === 'en' ? base : resume}
           profile={profile}
           atsMode={settings.atsMode}
           template={settings.template}

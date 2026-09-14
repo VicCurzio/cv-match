@@ -1,8 +1,11 @@
 import type { Resume } from '@/domain/resume/resumeSchema'
 
 /**
- * The port for cover letters (feature 0008) and Spanish-to-English translation
- * (feature 0009).
+ * The port for cover letters (feature 0008).
+ *
+ * Translation (feature 0009) is not here any more: it runs on the browser's
+ * own on-device translator (ADR 0008), which needs no key and sends nothing
+ * anywhere, so it did not need to wait behind this port.
  *
  * No language model is wired up (ADR 0003), and the null adapter below is the
  * only implementation today. The whole app must work with it -- that is the test
@@ -17,18 +20,12 @@ export interface CoverLetterInput {
   jobPostText?: string
 }
 
-export interface TranslateInput {
-  resume: Resume
-  targetLanguage: 'en'
-}
-
 export type GenerateResult<T> =
   | { ok: true; value: T }
   | { ok: false; reason: 'not-configured' | 'failed'; message: string }
 
 export interface Generator {
   coverLetter(input: CoverLetterInput): Promise<GenerateResult<string>>
-  translate(input: TranslateInput): Promise<GenerateResult<Resume>>
 }
 
 const NOT_CONFIGURED = {
@@ -40,9 +37,6 @@ const NOT_CONFIGURED = {
 
 export const nullGenerator: Generator = {
   async coverLetter() {
-    return NOT_CONFIGURED
-  },
-  async translate() {
     return NOT_CONFIGURED
   },
 }
