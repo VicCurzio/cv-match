@@ -1,5 +1,7 @@
 # CV Match
 
+[![Verify](https://github.com/VicCurzio/cv-match/actions/workflows/verify.yml/badge.svg)](https://github.com/VicCurzio/cv-match/actions/workflows/verify.yml)
+
 Herramienta web para armar, adaptar y descargar un CV. El CV se adapta al mercado al que se manda y a quién lo va a leer: una persona o un filtro automático.
 
 **En vivo: https://viccurzio.github.io/cv-match/**
